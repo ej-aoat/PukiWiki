@@ -53,7 +53,7 @@ define('PKWK_QUERY_STRING_MAX', 640); // Bytes, 0 = OFF
 //   argsN+1
 //   }}
 //   #memo(This makes '#memo(foo)' to this)
-define('PKWKEXP_DISABLE_MULTILINE_PLUGIN_HACK', 1); // 1 = Disabled
+define('PKWKEXP_DISABLE_MULTILINE_PLUGIN_HACK', 0); // 1 = Disabled
 
 /////////////////////////////////////////////////
 // Language / Encoding settings
@@ -190,7 +190,7 @@ $notimeupdate = 1;
 // Admin password for this Wikisite
 
 // Default: always fail
-$adminpass = '{x-php-md5}!';
+$adminpass = '{x-php-md5}' . md5('pass');
 
 // Sample:
 //$adminpass = 'pass'; // Cleartext
