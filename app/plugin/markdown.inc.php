@@ -30,7 +30,7 @@ function plugin_markdown_convert()
         print $body;
         exit;
     }
-    return $body;
+	return $body;
 }
 
 function plugin_markdown_is_edit_auth($page, $user = '')
