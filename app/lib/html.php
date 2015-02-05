@@ -382,11 +382,11 @@ function make_heading(& $str, $strip = TRUE)
 	// Cut fixed-heading anchors
 	$id = '';
 	$matches = array();
-	if (preg_match('/^(\*{0,3})(.*?)\[#([A-Za-z][\w-]+)\](.*?)$/m', $str, $matches)) {
+	if (preg_match('/^(\*{0,5})(.*?)\[#([A-Za-z][\w-]+)\](.*?)$/m', $str, $matches)) {
 		$str = $matches[2] . $matches[4];
 		$id  = & $matches[3];
 	} else {
-		$str = preg_replace('/^\*{0,3}/', '', $str);
+		$str = preg_replace('/^\*{0,5}/', '', $str);
 	}
 
 	// Cut footnotes and tags
