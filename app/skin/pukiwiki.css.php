@@ -357,7 +357,7 @@ div#menubar {
 <?php   if ($media == 'print') { ?>
 	display:none;
 <?php   } else { ?>
-	width:9em;
+	width:15em;
 	padding:0px;
 	margin:4px;
 	word-break:break-all;
@@ -371,7 +371,7 @@ div#menubar ul {
 	padding:0px 0px 0px .5em;
 }
 
-div#menubar ul li { line-height:110%; }
+div#menubar ul li { line-height:1.5; }
 
 div#menubar h4 { font-size:110%; }
 
