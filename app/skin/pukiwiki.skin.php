@@ -173,12 +173,12 @@ function _navigator($key, $value = '', $javascript = ''){
    <div id="menubar"><?php echo do_plugin_convert('menu') ?></div>
   </td>
   <td valign="top">
-   <div id="body"><?php echo $body ?></div>
+   <div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
   </td>
  </tr>
 </table>
 <?php } else { ?>
-<div id="body"><?php echo $body ?></div>
+<div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
 <?php } ?>
 
 <?php if ($notes != '') { ?>

@@ -68,6 +68,9 @@ if ($trackback || $referer) {
 	require(LIB_DIR . 'trackback.php'); // TrackBack
 }
 
+include_once(PLUGIN_DIR . 'paraedit.inc.php');
+$post["msg"] = _plugin_paraedit_parse_postmsg($post["msg_before"], $post["msg"], $post["msg_after"]);
+
 /////////////////////////////////////////////////
 // Main
 
