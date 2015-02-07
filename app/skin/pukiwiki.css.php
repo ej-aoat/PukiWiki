@@ -651,3 +651,34 @@ td.vote_td2 {
 	color:inherit;
 	background-color:#EEF5FF;
 }
+
+/* contentsx */
+div#body .toc {
+	float: right;
+	font-size:13px;
+	border:1px solid gray;
+	background:white;
+	margin:0px 0px 0px 10px;
+	z-index: 2;
+}
+div#body .toc .toctitle {
+	text-align:center;
+	margin:0px 10px 0px 0px;
+}
+div#body .toc .toctitle span {
+	font-weight:bold;
+	margin:0px 5px 0px 5px;
+}
+div#body .toc .toclist ul{
+	margin:5px 5px 5px 20px;
+	padding: 0;
+}
+div#body .toc .toclist ul li{
+	margin-left: 1em;
+}
+div#body .toc .toclist ul ul{
+	margin-left: 1em;
+}
+div#body .toc .toctitle {
+	display: block;
+}

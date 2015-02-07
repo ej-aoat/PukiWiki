@@ -9,6 +9,8 @@
 error_reporting(E_ERROR | E_PARSE); // Avoid E_WARNING, E_NOTICE, etc
 //error_reporting(E_ALL); // Debug purpose
 
+//ini_set('display_errors', 1); // Output Debug Message
+
 // Special
 //define('PKWK_READONLY',  1);
 //define('PKWK_SAFE_MODE', 1);
