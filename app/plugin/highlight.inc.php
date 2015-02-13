@@ -23,7 +23,7 @@ function plugin_highlight_convert()
     global $head_tags;
     static $jssrc = array(
         "as3"        => "shBrushAS3.js",
-        "bash"       => "shBrushBush.js",
+        "bash"       => "shBrushBash.js",
         "cpp"        => "shBrushCpp.js",
         "c"          => "shBrushCpp.js",
         "c++"        => "shBrushCpp.js",
