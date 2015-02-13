@@ -22,6 +22,8 @@ function plugin_highlight_convert()
 {
     global $head_tags;
     static $jssrc = array(
+        "as3"        => "shBrushAS3.js",
+        "bash"       => "shBrushBush.js",
         "cpp"        => "shBrushCpp.js",
         "c"          => "shBrushCpp.js",
         "c++"        => "shBrushCpp.js",
@@ -29,12 +31,15 @@ function plugin_highlight_convert()
         "c-sharp"    => "shBrushCSharp.js",
         "csharp"     => "shBrushCSharp.js",
         "css"        => "shBrushCss.js",
+        "diff"       => "shBrushDiff.js",
         "delphi"     => "shBrushDelphi.js",
-        "pascal"     => "shBrushDelphi.js",
+        "html"       => "shBrushXml.js",
         "java"       => "shBrushJava.js",
+        "jfx"        => "shBrushJavaFX.js",
         "js"         => "shBrushJScript.js",
         "jscript"    => "shBrushJScript.js",
         "javascript" => "shBrushJScript.js",
+        "pascal"     => "shBrushDelphi.js",
         "php"        => "shBrushPhp.js",
         "py"         => "shBrushPython.js",
         "python"     => "shBrushPython.js",
