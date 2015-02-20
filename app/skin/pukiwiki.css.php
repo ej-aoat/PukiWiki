@@ -376,7 +376,22 @@ div#menubar ul li {
 	list-style-type: none;
 }
 
-div#menubar h4 { font-size:110%; }
+div#menubar h2 {
+	margin-top: 0.5em;
+}
+
+div#menubar h3 {
+	margin-top: 0.5em;
+}
+
+div#menubar h4 {
+	margin-top: 0.5em;
+	font-size:110%;
+}
+
+div#menubar a:hover {
+	color: #215dc6;
+}
 
 div#body {
 	padding:0px;
