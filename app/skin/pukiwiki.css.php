@@ -389,6 +389,10 @@ div#menubar h4 {
 	font-size:110%;
 }
 
+div#menubar h5 {
+	margin-top: 0.5em;
+}
+
 div#menubar a:hover {
 	color: #215dc6;
 }
