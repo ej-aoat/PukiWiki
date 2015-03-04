@@ -83,6 +83,7 @@ h1, h2 {
 	padding:.3em;
 	border:0px;
 	margin:0px 0px .5em 0px;
+	clear: both;
 }
 h3 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
@@ -95,6 +96,7 @@ h3 {
 	background-color:#FFFFFF;
 	padding:.3em;
 	margin:0px 0px .5em 0px;
+	clear: both;
 }
 h4 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
@@ -680,7 +682,7 @@ div#body .toc {
 	font-size:13px;
 	border:1px solid gray;
 	background:white;
-	margin:0px 0px 0px 10px;
+	margin:0px 0px 10px 10px;
 	z-index: 2;
 }
 div#body .toc .toctitle {
