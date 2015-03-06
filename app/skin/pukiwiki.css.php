@@ -64,7 +64,7 @@ a:visited {
 <?php	if ($media == 'print') { ?>
 	text-decoration: underline;
 <?php	} else { ?>
-	color:#a63d21;
+	color:#215dc6;
 	background-color:inherit;
 	text-decoration:none;
 <?php	} ?>
@@ -83,7 +83,6 @@ h1, h2 {
 	padding:.3em;
 	border:0px;
 	margin:0px 0px .5em 0px;
-	clear: both;
 }
 h3 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
@@ -96,7 +95,6 @@ h3 {
 	background-color:#FFFFFF;
 	padding:.3em;
 	margin:0px 0px .5em 0px;
-	clear: both;
 }
 h4 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
@@ -123,6 +121,10 @@ h1.title {
 	padding: 12px 0px 0px 0px;
 	border: 0px;
 	margin: 12px 0px 0px 0px;
+}
+
+#body h1,#body h2,#body h3,#body h4 {
+	clear: both;
 }
 
 dt {
