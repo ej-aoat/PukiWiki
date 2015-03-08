@@ -77,7 +77,7 @@ define('CACHE_DIR',     RUN_HOME . 'cache/'    ); // Some sort of caches
 define('UPLOAD_DIR',    RUN_HOME . 'attach/'   ); // Attached files and logs
 define('COUNTER_DIR',   RUN_HOME . 'counter/'  ); // Counter plugin's counts
 define('TRACKBACK_DIR', RUN_HOME . 'trackback/'); // TrackBack logs
-define('PLUGIN_DIR',    RUN_HOME . 'plugin/'   ); // Plugin directory
+define('PLUGIN_DIR',    DATA_HOME . 'plugin/'   ); // Plugin directory
 
 /////////////////////////////////////////////////
 // Directory settings II (ended with '/')
