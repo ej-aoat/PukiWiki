@@ -69,15 +69,15 @@ define('UI_LANG', LANG); // 'en' for Internationalized wikisite
 
 // You may hide these directories (from web browsers)
 // by setting DATA_HOME at index.php.
-
-define('DATA_DIR',      DATA_HOME . 'wiki/'     ); // Latest wiki texts
-define('DIFF_DIR',      DATA_HOME . 'diff/'     ); // Latest diffs
-define('BACKUP_DIR',    DATA_HOME . 'backup/'   ); // Backups
-define('CACHE_DIR',     DATA_HOME . 'cache/'    ); // Some sort of caches
-define('UPLOAD_DIR',    DATA_HOME . 'attach/'   ); // Attached files and logs
-define('COUNTER_DIR',   DATA_HOME . 'counter/'  ); // Counter plugin's counts
-define('TRACKBACK_DIR', DATA_HOME . 'trackback/'); // TrackBack logs
-define('PLUGIN_DIR',    DATA_HOME . 'plugin/'   ); // Plugin directory
+define('RUN_HOME',      DATA_HOME . '../data/'     ); // Latest wiki texts
+define('DATA_DIR',      RUN_HOME . 'wiki/'     ); // Latest wiki texts
+define('DIFF_DIR',      RUN_HOME . 'diff/'     ); // Latest diffs
+define('BACKUP_DIR',    RUN_HOME . 'backup/'   ); // Backups
+define('CACHE_DIR',     RUN_HOME . 'cache/'    ); // Some sort of caches
+define('UPLOAD_DIR',    RUN_HOME . 'attach/'   ); // Attached files and logs
+define('COUNTER_DIR',   RUN_HOME . 'counter/'  ); // Counter plugin's counts
+define('TRACKBACK_DIR', RUN_HOME . 'trackback/'); // TrackBack logs
+define('PLUGIN_DIR',    RUN_HOME . 'plugin/'   ); // Plugin directory
 
 /////////////////////////////////////////////////
 // Directory settings II (ended with '/')
