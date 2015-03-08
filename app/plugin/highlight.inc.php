@@ -1,94 +1,52 @@
 <?php
-/**
- * Highlight Code Syntax using dp.SyntaxHighlighter (valid with 1.5.1)
- *
- * @author     sonots
- * @license    http://www.gnu.org/licenses/gpl.html GPL v2
- * @link       http://lsx.sourceforge.jp/?Plugin%2Fhighlight.inc.php
- * @version    $Id: highlight.inc.php,v 1.2 2008-03-12 16:28:39Z sonots $
- * @package    plugin
- */
-
 define(PLUGIN_HIGHLIGHT_URI, (defined('SKIN_URI') ? SKIN_URI : SKIN_DIR) . 'SyntaxHighlighter/');
 
 function plugin_highlight_init()
 {
-    global $head_tags;
-    $head_tags[] = '<link type="text/css" rel="stylesheet" href="' . PLUGIN_HIGHLIGHT_URI . 'styles/shCore.css"></link>';
-	$head_tags[] = '<link type="text/css" rel="stylesheet" href="' . PLUGIN_HIGHLIGHT_URI . 'styles/shThemeDjango.css"></link>';
+	global $head_tags;
+
+	$head_tags[] = '<link rel="stylesheet" href="//cdn.jsdelivr.net/highlight.js/8.4/styles/monokai_sublime.min.css">';
+	$head_tags[] = '<script src="//cdn.jsdelivr.net/highlight.js/8.4/highlight.min.js"></script>';
 }
 
 function plugin_highlight_convert()
 {
-    global $head_tags;
-    static $jssrc = array(
-        "as3"        => "shBrushAS3.js",
-        "bash"       => "shBrushBash.js",
-        "cpp"        => "shBrushCpp.js",
-        "c"          => "shBrushCpp.js",
-        "c++"        => "shBrushCpp.js",
-        "c#"         => "shBrushCSharp.js",
-        "c-sharp"    => "shBrushCSharp.js",
-        "csharp"     => "shBrushCSharp.js",
-        "css"        => "shBrushCss.js",
-        "diff"       => "shBrushDiff.js",
-        "delphi"     => "shBrushDelphi.js",
-        "html"       => "shBrushXml.js",
-        "java"       => "shBrushJava.js",
-        "jfx"        => "shBrushJavaFX.js",
-        "js"         => "shBrushJScript.js",
-        "jscript"    => "shBrushJScript.js",
-        "javascript" => "shBrushJScript.js",
-        "pascal"     => "shBrushDelphi.js",
-        "php"        => "shBrushPhp.js",
-        "py"         => "shBrushPython.js",
-        "python"     => "shBrushPython.js",
-        "rb"         => "shBrushRuby.js",
-        "ruby"       => "shBrushRuby.js",
-        "rails"      => "shBrushRuby.js",
-        "ror"        => "shBrushRuby.js",
-        "sql"        => "shBrushSql.js",
-        "vb"         => "shBrushVb.js",
-        "vb.net"     => "shBrushVb.js",
-        "xml"        => "shBrushXml.js",
-        "html"       => "shBrushXml.js",
-        "xhtml"      => "shBrushXml.js",
-        "xslt"       => "shBrushXml.js",
-    );
-    static $languages = array();
-    
-    $args   = func_get_args();
-    $end    = in_array("end", $args);
-    $body   = array_pop($args);
-    $class  = array_shift($args);
-    list($language) = explode(':', $class);
-    
-    $ret = '';
-    if (in_array($language, array_keys($jssrc))) {
-        $languages[$language] = true;
-	    $languageStyle = 'brush: ' . $language;
-        
-        $ret .= '<div>';
-        $ret .= '<pre class="' . $languageStyle . ' ' . htmlspecialchars($class). '">';
-        $ret .= htmlspecialchars($body);
-        $ret .= '</pre>';
-        $ret .= '</div>';
-    } elseif (! $end) {
-        return "<p>highlight(): the language, $language, is not supported.</p>";
-    }
-    
-    if ($end) {
-        $tags = array();
-        $tags[] = '<script type="text/javascript" src="' . PLUGIN_HIGHLIGHT_URI . 'scripts/shCore.js"></script>';
-        foreach (array_keys($languages) as $language) {
-            $tags[] = '<script type="text/javascript" src="' . PLUGIN_HIGHLIGHT_URI . 'scripts/' . $jssrc[$language] . '"></script>';
-        }
-        $tags[] = '<script type="text/javascript">';
-        //$tags[] = 'dp.SyntaxHighlighter.ClipboardSwf = "' . PLUGIN_HIGHLIGHT_URI . 'Scripts/clipboard.swf";';
-        $tags[] = 'SyntaxHighlighter.all();';
-        $tags[] = '</script>';
-        return implode($tags, "\n");
-    } 
-    return $ret;
+	global $head_tags;
+
+	static $languages = array();
+
+	$args   = func_get_args();
+	$end    = in_array("end", $args);
+	$body   = array_pop($args);
+	$class  = array_shift($args);
+	list($language) = explode(':', $class);
+
+	$ret = '';
+	if (!$end) {
+		// for highlight.js
+		$ret .= '<div class="for_highlight">';
+		$ret .= '<pre><code class="'. ' ' . htmlspecialchars($language). '">';
+		$ret .= htmlspecialchars($body);
+		$ret .= '</code></pre>';
+		$ret .= '</div>';
+	}
+
+	if ($end) {
+		$tags = array();
+		$tags[] = '<script type="text/javascript">';
+
+		$tags[] = <<<EOF
+//タブスペースの調整
+hljs.configure({
+	tabReplace: "    ",	//4文字分の半角スペース
+});
+EOF;
+
+		$tags[] = 'hljs.initHighlightingOnLoad();';
+		$tags[] = '</script>';
+
+		return implode($tags, "\n");
+
+	}
+	return $ret;
 }
-?>

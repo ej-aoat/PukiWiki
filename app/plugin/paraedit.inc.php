@@ -53,14 +53,14 @@ GPL2 (GNU General Public License version 2)
 
 // 編集リンクの文字列・スタイルを指定
 //   %s に URL が入る
-define(_EDIT_LINK, '<div style="text-align: right; font-size: x-small; padding: 0px; "><a href="%s">[edit]</a></div>');
+define(_EDIT_LINK, '<div style="text-align: right; font-size: x-small; padding: 0px; margin-top: -7px;"><a href="%s">[edit]</a></div>');
 
 // 編集リンクの挿入箇所を指定
 //   <h2>header</h2> の時、$1:<h2>, $2:header, $3:</h2> となるので $link を好きな場所に移動
 // (例)
 //   define(_PARAEDIT_LINK_POS, '$1$2$link$3'); // </h2>の前
-     define(_PARAEDIT_LINK_POS, '$link$1$2$3'); // <h2>の前
-//   define(_PARAEDIT_LINK_POS, '$1$2$3$link'); // </h2>の後ろ
+//     define(_PARAEDIT_LINK_POS, '$link$1$2$3'); // <h2>の前
+   define(_PARAEDIT_LINK_POS, '$1$2$3$link'); // </h2>の後ろ
 
 
 // 改行の代替文字列

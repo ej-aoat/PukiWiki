@@ -174,7 +174,7 @@ tfoot th.style_th {
 .style_table {
 	padding:0px;
 	border:0px;
-	margin:auto;
+	margin: 4px 0 10px 25px;
 	text-align:left;
 	color:inherit;
 	background-color:#ccd5dd;
@@ -707,4 +707,11 @@ div#body .toc .toclist ul ul{
 }
 div#body .toc .toctitle {
 	display: block;
+}
+
+/* highlight */
+.for_highlight pre {
+	font-size: 100%;
+	border: none;
+	background-color: transparent;
 }
