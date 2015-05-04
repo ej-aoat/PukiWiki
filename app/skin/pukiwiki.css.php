@@ -136,16 +136,13 @@ margin-left:1em;
 }
 
 pre {
-border-top:#DDDDEE 1px solid;
-border-bottom:#888899 1px solid;
-border-left:#DDDDEE 1px solid;
-border-right:#888899 1px solid;
-padding:.5em;
-margin-left:1em;
-margin-right:2em;
-white-space:pre;
-color:black;
-background-color:#F0F8FF;
+	border-radius: 3px;
+	border: 1px solid #e2e2e2;
+	padding:.5em;
+	margin: 1em 1em 1em 1.6em;
+	white-space:pre;
+	color:black;
+	background-color: #fafafa;
 }
 
 img {
