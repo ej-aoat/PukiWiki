@@ -121,7 +121,7 @@ class PluginSonotsToc
         static $syntax = array();
         if (empty($syntax)) {
             $syntax = array(
-                 'headline'   => '/^(\*{1,3})/',
+                 'headline'   => '/^(\*{1,5})/',
                  'include'    => '/^#include.*\((.+)\)/',
                  'title'      => '/^TITLE:(.+)/',
                  'contents'   => '/^#contents/',

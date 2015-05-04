@@ -81,17 +81,17 @@ text-decoration:underline;
 h1, h2 {
 font-family:verdana, arial, helvetica, Sans-Serif;
 color:inherit;
-background-color:#DDEEFF;
+background-color:#8bf;
 padding:.3em;
 border:0px;
 margin:0px 0px .5em 0px;
 }
 h3 {
 font-family:verdana, arial, helvetica, Sans-Serif;
-border-bottom:  3px solid #DDEEFF;
-border-top:     1px solid #DDEEFF;
-border-left:   10px solid #DDEEFF;
-border-right:   5px solid #DDEEFF;
+border-bottom:  3px solid #8bf;
+border-top:     1px solid #8bf;
+border-left:   10px solid #8bf;
+border-right:   5px solid #8bf;
 
 color:inherit;
 background-color:#FFFFFF;
@@ -100,7 +100,7 @@ margin:0px 0px .5em 0px;
 }
 h4 {
 font-family:verdana, arial, helvetica, Sans-Serif;
-border-left:   18px solid #DDEEFF;
+border-left:   18px solid #8bf;
 
 color:inherit;
 background-color:#FFFFFF;
@@ -110,7 +110,7 @@ margin:0px 0px .5em 0px;
 h5, h6 {
 font-family:verdana, arial, helvetica, Sans-Serif;
 color:inherit;
-background-color:#DDEEFF;
+background-color:#8bf;
 padding:.3em;
 border:0px;
 margin:0px 0px .5em 0px;
