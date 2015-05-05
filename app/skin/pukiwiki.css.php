@@ -140,9 +140,13 @@ pre {
 	border: 1px solid #e2e2e2;
 	padding:.5em;
 	margin: 1em 1em 1em 1.6em;
-	white-space:pre;
 	color:black;
 	background-color: #fafafa;
+	overflow: auto;
+	width: 95%;
+	word-break:break-all;
+	word-wrap:break-word;
+	white-space:pre-wrap;
 }
 
 img {
