@@ -160,6 +160,10 @@ margin-bottom:.5em;
 line-height:130%;
 }
 
+li {
+	margin: 0.2em 0;
+}
+
 em { font-style:italic; }
 
 strong { font-weight:bold; }
@@ -699,8 +703,8 @@ font-weight:bold;
 margin:0px 5px 0px 5px;
 }
 div#body .toc .toclist ul{
-margin:5px 5px 5px 20px;
-padding: 0;
+	margin: .5em 5px .5em 20px
+	padding: 0;
 }
 div#body .toc .toclist ul li{
 margin-left: 1em;
