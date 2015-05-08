@@ -703,7 +703,7 @@ font-weight:bold;
 margin:0px 5px 0px 5px;
 }
 div#body .toc .toclist ul{
-	margin: .5em 5px .5em 20px
+	margin: .5em 5px .5em 20px;
 	padding: 0;
 }
 div#body .toc .toclist ul li{
