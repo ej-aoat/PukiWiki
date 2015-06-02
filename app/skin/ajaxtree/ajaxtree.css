@@ -1,0 +1,79 @@
+/* ajaxtree.inc.php */
+
+#ajaxtree {
+	margin-bottom: 1em;
+	overflow: hidden;
+}
+
+#ajaxtree ul,
+#menubar #ajaxtree ul {
+	margin: 0 0 0 -12px;
+	padding: 0 0 0 12px;
+	cursor: default;
+}
+
+#ajaxtree li,
+#menubar #ajaxtree li {
+	margin: 0;
+	padding: 0 0 0 12px;
+	list-style-type: none;
+	background: transparent url(leaf.gif) no-repeat 0 0.1em;
+}
+
+#ajaxtree li.collapsed,
+#menubar #ajaxtree li.collapsed {
+	background-image: url(collapsed.gif);
+	cursor: pointer;
+}
+
+#ajaxtree li.expanded,
+#menubar #ajaxtree li.expanded {
+	background-image: url(expanded.gif);
+	cursor: pointer;
+}
+
+#ajaxtree a,
+#ajaxtree span.current {
+	margin: 0;
+	margin-right: -100%;
+	padding: 2px 0 3px 0;
+	display: block;
+	width: 100%;
+	line-height: 100%;
+	text-decoration: none;
+	white-space: nowrap;
+}
+
+#ajaxtree li a,
+#ajaxtree li span.current {
+	margin-left: 4px;			/* (width of image) - (indent) */
+}
+
+*:first-child+html #ajaxtree a,
+*:first-child+html #ajaxtree span.current {	/* for IE7 */
+	padding-bottom: 2px;
+}
+
+* html #ajaxtree a,
+* html #ajaxtree span.current {			/* for IE6 and below */
+	padding-bottom: 1px;
+	/*\*/
+	display: inline;			/* for Windows IE */
+}
+
+#ajaxtree span.current {
+	background: #ffc;
+	cursor: default;
+}
+
+#ajaxtree a:hover,
+#ajaxtree span.current:hover {
+	background: #cde;
+}
+
+#ajaxtree span.count {
+	margin-left: 2px;
+	color: #803;
+	font-family: Arial, sans-serif;
+	font-size: 85%;
+}
