@@ -51,7 +51,8 @@ if (!defined('PLUGIN_AJAXTREE_INCLUDE_LIST')) {
 
 // Expand list
 if (!defined('PLUGIN_AJAXTREE_EXPAND_LIST')) {
-    define('PLUGIN_AJAXTREE_EXPAND_LIST', '');
+	// ２階層目まで全て展開して表示
+	define('PLUGIN_AJAXTREE_EXPAND_LIST', '^[^\/]+$');
 }
 
 
