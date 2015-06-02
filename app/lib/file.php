@@ -88,6 +88,11 @@ function page_write($page, $postdata, $notimestamp = FALSE)
 	}
 
 	links_update($page);
+
+	// From Ajaxtree Plugin
+	if (exist_plugin('ajaxtree')) {
+		plugin_ajaxtree_write_after();
+	}
 }
 
 // Modify original text with user-defined / system-defined rules

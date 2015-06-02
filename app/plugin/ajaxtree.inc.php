@@ -194,13 +194,12 @@ function plugin_ajaxtree_reset_cache()
 {
     $pages =& plugin_ajaxtree_get_pages();
     $leaf  =& plugin_ajaxtree_get_leaf_flags();
-
     foreach ($pages as $page) {
         if ($leaf[$page] === false) {
             plugin_ajaxtree_update_cache($page);
         }
     }
-    plugin_ajaxtree_update_cache('/');
+	plugin_ajaxtree_update_cache('/');
 }
 
 function plugin_ajaxtree_update_cache($page)
@@ -211,7 +210,7 @@ function plugin_ajaxtree_update_cache($page)
     } else {
         $html = plugin_ajaxtree_get_subtree($page);
     }
-    plugin_ajaxtree_write_file($file, $html);
+    return plugin_ajaxtree_write_file($file, $html);
 }
 
 function plugin_ajaxtree_get_root_html()
