@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: ja.lng.php,v 1.14 2006/04/10 17:36:56 teanan Exp $
-// Copyright (C)
-//   2002-2005 PukiWiki Developers Team
+// ja.lng.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -73,6 +73,7 @@ $_btn_template  = '雛形とするページ';
 $_btn_load      = '読込';
 $_btn_edit      = '編集';
 $_btn_delete    = '削除';
+$_label_template_pages	= 'テンプレートページ';
 
 ///////////////////////////////////////
 // Authentication
@@ -83,10 +84,6 @@ $_msg_auth         = 'PukiWikiAuth';
 // Page name
 $rule_page = 'FormattingRules';	// Formatting rules
 $help_page = 'Help';		// Help
-
-///////////////////////////////////////
-// TrackBack (REMOVED)
-$_tb_date  = 'Y年n月j日 H:i:s';
 
 /////////////////////////////////////////////////
 // 題名が未記入の場合の表記 (article)
@@ -112,7 +109,6 @@ $_LANG['skin']['list']      = '一覧';	// List of pages
 $_LANG['skin']['new']       = '新規';
 $_LANG['skin']['rdf']       = '最終更新のRDF';	// RDF of RecentChanges
 $_LANG['skin']['recent']    = '最終更新';	// RecentChanges
-$_LANG['skin']['refer']     = 'リンク元';	// Show list of referer
 $_LANG['skin']['reload']    = 'リロード';
 $_LANG['skin']['rename']    = '名前変更';	// Rename a page (and related)
 $_LANG['skin']['rss']       = '最終更新のRSS';	// RSS of RecentChanges
@@ -120,9 +116,10 @@ $_LANG['skin']['rss10']     = & $_LANG['skin']['rss'];
 $_LANG['skin']['rss20']     = & $_LANG['skin']['rss'];
 $_LANG['skin']['search']    = '単語検索';
 $_LANG['skin']['top']       = 'トップ';	// Top page
-$_LANG['skin']['trackback'] = 'Trackback';	// Show list of trackback
 $_LANG['skin']['unfreeze']  = '凍結解除';
 $_LANG['skin']['upload']    = '添付';	// Attach a file
+$_LANG['skin']['login']     = 'ログイン';
+$_LANG['skin']['logout']    = 'ログアウト';
 
 ///////////////////////////////////////
 // Plug-in message
@@ -230,6 +227,8 @@ $_msg_comment = 'コメント: ';
 $_title_comment_collided = '$1 で【更新の衝突】が起きました';
 $_msg_comment_collided   = 'あなたがこのページを編集している間に、他の人が同じページを更新してしまったようです。<br />
 コメントを追加しましたが、違う位置に挿入されているかもしれません。<br />';
+$_comment_plugin_fail_msg = 'あなたがこのページを編集している間に、他の人が同じページを更新してしまったようです。<br />
+コメントの追加に失敗しました。<br />';
 
 ///////////////////////////////////////
 // deleted.inc.php
@@ -332,19 +331,6 @@ $_recent_plugin_frame = '<h5>最新の%d件</h5>
 <div>%s</div>';
 
 ///////////////////////////////////////
-// referer.inc.php
-$_referer_msg = array(
-	'msg_H0_Refer'       => 'リンク元の表示',
-	'msg_Hed_LastUpdate' => '最終更新日時',
-	'msg_Hed_1stDate'    => '初回登録日時',
-	'msg_Hed_RefCounter' => 'カウンタ',
-	'msg_Hed_Referer'    => 'Referer',
-	'msg_Fmt_Date'       => 'Y年n月j日 H:i',
-	'msg_Chr_uarr'       => '↑',
-	'msg_Chr_darr'       => '↓',
-);
-
-///////////////////////////////////////
 // rename.inc.php
 $_rename_messages  = array(
 	'err' => '<p>エラー:%s</p>',
@@ -442,4 +428,12 @@ $_vote_plugin_votes  = '投票';
 // yetlist.inc.php
 $_title_yetlist = '未作成のページ一覧';
 $_err_notexist  = '未作成のページはありません。';
-?>
+
+///////////////////////////////////////
+// loginform.inc.php
+$_loginform_messages = array(
+	'username' => 'ユーザー名:',
+	'password' => 'パスワード:',
+	'login' => 'ログイン',
+	'invalid_username_or_password' => 'ユーザー名またはパスワードが違います'
+);

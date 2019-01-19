@@ -3,12 +3,12 @@
 // $Id: pukiwiki.php,v 1.23 2011/01/25 15:01:01 henoheno Exp $
 //
 // PukiWiki 1.4.*
-//  Copyright (C) 2002-2005 by PukiWiki Developers Team
-//  http://pukiwiki.sourceforge.jp/
+//  Copyright (C) 2002-2005 by PukiWiki Development Team
+//  http://pukiwiki.osdn.jp/
 //
 // PukiWiki 1.3.*
-//  Copyright (C) 2002-2004 by PukiWiki Developers Team
-//  http://pukiwiki.sourceforge.jp/
+//  Copyright (C) 2002-2004 by PukiWiki Development Team
+//  http://pukiwiki.osdn.jp/
 //
 // PukiWiki 1.3 (Base)
 //  Copyright (C) 2001-2002 by yu-ji <sng@factage.com>
@@ -53,7 +53,7 @@ if (! extension_loaded('mbstring')) {
 }
 
 // Defaults
-$notify = $trackback = $referer = 0;
+$notify = 0;
 
 // Load *.ini.php files and init PukiWiki
 require(LIB_DIR . 'init.php');
@@ -62,14 +62,6 @@ require(LIB_DIR . 'init.php');
 if ($notify) {
 	require(LIB_DIR . 'mail.php'); // Mail notification
 }
-if ($trackback || $referer) {
-	// Referer functionality uses trackback functions
-	// without functional reason now
-	require(LIB_DIR . 'trackback.php'); // TrackBack
-}
-
-include_once(PLUGIN_DIR . 'paraedit.inc.php');
-$post["msg"] = _plugin_paraedit_parse_postmsg($post["msg_before"], $post["msg"], $post["msg_after"]);
 
 /////////////////////////////////////////////////
 // Main
@@ -85,6 +77,7 @@ if (isset($vars['cmd'])) {
 	$plugin = '';
 }
 if ($plugin != '') {
+	ensure_valid_auth_user();
 	if (exist_plugin_action($plugin)) {
 		// Found and exec
 		$retvars = do_plugin_action($plugin);
@@ -124,12 +117,8 @@ if (isset($retvars['body']) && $retvars['body'] != '') {
 	$vars['page'] = & $base;
 
 	$body  = convert_html(get_source($base));
-
-	if ($trackback) $body .= tb_get_rdf($base); // Add TrackBack-Ping URI
-	if ($referer) ref_save($base);
 }
 
 // Output
 catbody($title, $page, $body);
 exit;
-?>

@@ -114,6 +114,13 @@ function plugin_tracker_action()
 	}
 	// ページ名を決定
 	$base = $post['_base'];
+	if (!is_pagename($base))
+	{
+		return array(
+			'msg'=>'cannot write',
+			'body'=>'page name ('.htmlsc($base).') is not valid.'
+		);
+	}
 	$num = 0;
 	$name = (array_key_exists('_name',$post)) ? $post['_name'] : '';
 	if (array_key_exists('_page',$post))
@@ -174,7 +181,7 @@ function plugin_tracker_action()
 	// Writing page data, without touch
 	page_write($page, join('', $postdata));
 
-	$r_page = rawurlencode($page);
+	$r_page = pagename_urlencode($page);
 
 	pkwk_headers_sent();
 	header('Location: ' . get_script_uri() . '?' . $r_page);
@@ -229,7 +236,7 @@ function plugin_tracker_get_fields($base,$refer,&$config)
 		) as $field=>$class)
 	{
 		$class = 'Tracker_field_'.$class;
-		$fields[$field] = &new $class(array($field,$_tracker_messages["btn$field"],'','20',''),$base,$refer,$config);
+		$fields[$field] = new $class(array($field,$_tracker_messages["btn$field"],'','20',''),$base,$refer,$config);
 	}
 
 	foreach ($config->get('fields') as $field)
@@ -242,7 +249,7 @@ function plugin_tracker_get_fields($base,$refer,&$config)
 			$field[2] = 'text';
 			$field[3] = '20';
 		}
-		$fields[$field[0]] = &new $class($field,$base,$refer,$config);
+		$fields[$field[0]] = new $class($field,$base,$refer,$config);
 	}
 	return $fields;
 }
@@ -628,7 +635,7 @@ function plugin_tracker_getlist($page,$refer,$config_name,$list,$order='',$limit
 
 	if (!$config->read())
 	{
-		return "<p>config file '".htmlsc($config_name)."' is not exist.";
+		return "<p>config file '".htmlsc($config_name)."' is not exist.</p>";
 	}
 
 	$config->config_name = $config_name;
@@ -638,7 +645,7 @@ function plugin_tracker_getlist($page,$refer,$config_name,$list,$order='',$limit
 		return "<p>config file '".make_pagelink($config->page.'/'.$list)."' not found.</p>";
 	}
 
-	$list = &new Tracker_list($page,$refer,$config,$list);
+	$list = new Tracker_list($page,$refer,$config,$list);
 	$list->sort($order);
 	return $list->toString($limit);
 }
@@ -654,6 +661,7 @@ class Tracker_list
 	var $pattern_fields;
 	var $rows;
 	var $order;
+	var $sort_keys;
 
 	function Tracker_list($page,$refer,&$config,$list)
 	{
@@ -678,7 +686,7 @@ class Tracker_list
 			{
 				$field = array_shift($pattern);
 				$this->pattern_fields[] = $field;
-				$this->pattern .= '(.*)';
+				$this->pattern .= '(.*?)';
 			}
 		}
 		// ページの列挙と取り込み
@@ -738,6 +746,22 @@ class Tracker_list
 			}
 		}
 	}
+	function compare($a, $b)
+	{
+		foreach ($this->sort_keys as $sort_key)
+		{
+			$field = $sort_key['field'];
+			$dir = $sort_key['dir'];
+			$f = $this->fields[$field];
+			$sort_type = $f->sort_type;
+			$aVal = isset($a[$field]) ? $f->get_value($a[$field]) : '';
+			$bVal = isset($b[$field]) ? $f->get_value($b[$field]) : '';
+			$c = strnatcmp($aVal, $bVal) * ($dir === SORT_ASC ? 1 : -1);
+			if ($c === 0) continue;
+			return $c;
+		}
+		return 0;
+	}
 	function sort($order)
 	{
 		if ($order == '')
@@ -770,26 +794,17 @@ class Tracker_list
 			}
 			$this->order[$key] = $dir;
 		}
-		$keys = array();
-		$params = array();
+		$sort_keys = array();
 		foreach ($this->order as $field=>$order)
 		{
 			if (!array_key_exists($field,$names))
 			{
 				continue;
 			}
-			foreach ($this->rows as $row)
-			{
-				$keys[$field][] = isset($row[$field])? $this->fields[$field]->get_value($row[$field]) : '';
-			}
-			$params[] = $keys[$field];
-			$params[] = $this->fields[$field]->sort_type;
-			$params[] = $order;
-
+			$sort_keys[] = array('field' => $field, 'dir' => $order);
 		}
-		$params[] = &$this->rows;
-
-		call_user_func_array('array_multisort',$params);
+		$this->sort_keys = $sort_keys;
+		usort($this->rows, array($this, 'compare'));
 	}
 	function replace_item($arr)
 	{
@@ -921,4 +936,4 @@ function plugin_tracker_get_source($page)
 	// #freezeを削除
 	return preg_replace('/^#freeze\s*$/im', '', $source);
 }
-?>
+

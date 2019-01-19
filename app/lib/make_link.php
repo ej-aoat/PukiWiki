@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: make_link.php,v 1.38 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2003-2005 PukiWiki Developers Team
+// make_link.php
+// Copyright
+//   2003-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -287,7 +287,7 @@ class Link_note extends Link
 	{
 		return <<<EOD
 \(\(
- ((?:(?R)|(?!\)\)).)*) # (1) note body
+ ((?>(?=\(\()(?R)|(?!\)\)).)*) # (1) note body
 \)\)
 EOD;
 	}
@@ -307,7 +307,7 @@ EOD;
 		if (PKWK_ALLOW_RELATIVE_FOOTNOTE_ANCHOR) {
 			$script = '';
 		} else {
-			$script = get_script_uri() . '?' . rawurlencode($page);
+			$script = get_script_uri() . '?' . pagename_urlencode($page);
 		}
 
 		$id   = ++$note_id;
@@ -355,11 +355,12 @@ class Link_url extends Link
 	{
 		$s1 = $this->start + 1;
 		return <<<EOD
-(\[\[             # (1) open bracket
- ((?:(?!\]\]).)+) # (2) alias
+((?:\[\[))?       # (1) open bracket
+((?($s1)          # (2) alias
+((?:(?!\]\]).)+)  # (3) alias name
  (?:>|:)
-)?
-(                 # (3) url
+))?
+(                 # (4) url
  (?:(?:https?|ftp|news):\/\/|mailto:)[\w\/\@\$()!?&%#:;.,~'=*+-]+
 )
 (?($s1)\]\])      # close bracket
@@ -368,12 +369,12 @@ EOD;
 
 	function get_count()
 	{
-		return 3;
+		return 4;
 	}
 
 	function set($arr, $page)
 	{
-		list(, , $alias, $name) = $this->splice($arr);
+		list(, , , $alias, $name) = $this->splice($arr);
 		return parent::setParam($page, htmlsc($name),
 			'', 'url', $alias == '' ? $name : $alias);
 	}
@@ -519,7 +520,7 @@ EOD;
 
 		$url = get_interwiki_url($name, $this->param);
 		$this->url = ($url === FALSE) ?
-			$script . '?' . rawurlencode('[[' . $name . ':' . $this->param . ']]') :
+			$script . '?' . pagename_urlencode('[[' . $name . ':' . $this->param . ']]') :
 			htmlsc($url);
 
 		return parent::setParam(
@@ -713,10 +714,10 @@ function make_pagelink($page, $alias = '', $anchor = '', $refer = '', $isautolin
 
 	if ($page == '') return '<a href="' . $anchor . '">' . $s_alias . '</a>';
 
-	$r_page  = rawurlencode($page);
+	$r_page  = pagename_urlencode($page);
 	$r_refer = ($refer == '') ? '' : '&amp;refer=' . rawurlencode($refer);
 
-	if (! isset($related[$page]) && $page != $vars['page'] && is_page($page))
+	if (! isset($related[$page]) && $page !== $vars['page'] && is_page($page))
 		$related[$page] = get_filetime($page);
 
 	if ($isautolink || is_page($page)) {
@@ -836,7 +837,12 @@ function get_interwiki_url($name, $param)
 		if (isset($encode_aliases[$opt])) $opt = & $encode_aliases[$opt];
 
 		// Encoding conversion into specified encode, and URLencode
-		$param = rawurlencode(mb_convert_encoding($param, $opt, SOURCE_ENCODING));
+		if (strpos($url, '$1') === FALSE && substr($url, -1) === '?') {
+			// PukiWiki site
+			$param = pagename_urlencode(mb_convert_encoding($param, $opt, SOURCE_ENCODING));
+		} else {
+			$param = rawurlencode(mb_convert_encoding($param, $opt, SOURCE_ENCODING));
+		}
 	}
 
 	// Replace or Add the parameter
@@ -851,4 +857,3 @@ function get_interwiki_url($name, $param)
 
 	return $url;
 }
-?>

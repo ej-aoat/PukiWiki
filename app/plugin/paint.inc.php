@@ -84,7 +84,7 @@ function plugin_paint_action()
 		$r_refer = $s_refer = '';
 		if (array_key_exists('refer',$vars))
 		{
-			$r_refer = rawurlencode($vars['refer']);
+			$r_refer = pagename_urlencode($vars['refer']);
 			$s_refer = htmlsc($vars['refer']);
 		}
 		$link = "<p><a href=\"$script?$r_refer\">$s_refer</a></p>";;
@@ -256,7 +256,7 @@ function paint_insert_ref($filename)
 	}
 
 	// 更新の衝突を検出
-	if (md5(join('',$postdata_old)) != $vars['digest'])
+	if (md5(join('',$postdata_old)) !== $vars['digest'])
 	{
 		$ret['msg'] = $_paint_messages['msg_title_collided'];
 		$ret['body'] = $_paint_messages['msg_collided'];
@@ -266,4 +266,4 @@ function paint_insert_ref($filename)
 
 	return $ret;
 }
-?>
+

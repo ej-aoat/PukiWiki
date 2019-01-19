@@ -1,7 +1,7 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: edit.inc.php,v 1.49 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C) 2001-2007 PukiWiki Developers Team
+// edit.inc.php
+// Copyright (C) 2001-2016 PukiWiki Development Team
 // License: GPL v2 or (at your option) any later version
 //
 // Edit plugin (cmd=edit)
@@ -29,7 +29,7 @@ function plugin_edit_action()
 
 	$postdata = @join('', get_source($page));
 	if ($postdata == '') $postdata = auto_template($page);
-
+	$postdata = remove_author_info($postdata);
 	return array('msg'=>$_title_edit, 'body'=>edit_form($page, $postdata));
 }
 
@@ -43,9 +43,7 @@ function plugin_edit_preview()
 
 	// Loading template
 	if (isset($vars['template_page']) && is_page($vars['template_page'])) {
-
-		$vars['msg'] = join('', get_source($vars['template_page']));
-
+		$vars['msg'] = remove_author_info(get_source($vars['template_page'], TRUE, TRUE));
 		// Cut fixed anchors
 		$vars['msg'] = preg_replace('/^(\*{1,3}.*)\[#[A-Za-z][\w-]+\](.*)$/m', '$1$2', $vars['msg']);
 	}
@@ -82,7 +80,7 @@ function plugin_edit_inline()
 {
 	static $usage = '&edit(pagename#anchor[[,noicon],nolabel])[{label}];';
 
-	global $script, $vars, $fixed_heading_anchor_edit;
+	global $vars, $fixed_heading_anchor_edit;
 
 	if (PKWK_READONLY) return ''; // Show nothing 
 
@@ -93,7 +91,7 @@ function plugin_edit_inline()
 	$s_label = strip_htmltag(array_pop($args), FALSE);
 
 	$page    = array_shift($args);
-	if ($page == NULL) $page = '';
+	if ($page === NULL) $page = '';
 	$_noicon = $_nolabel = FALSE;
 	foreach($args as $arg){
 		switch(strtolower($arg)){
@@ -152,6 +150,7 @@ function plugin_edit_inline()
 	}
 
 	// URL
+	$script = get_script_uri();
 	if ($isfreeze) {
 		$url   = $script . '?cmd=unfreeze&amp;page=' . rawurlencode($s_page);
 	} else {
@@ -174,7 +173,7 @@ function plugin_edit_inline()
 // Write, add, or insert new comment
 function plugin_edit_write()
 {
-	global $vars, $trackback;
+	global $vars;
 	global $_title_collided, $_msg_collided_auto, $_msg_collided, $_title_deleted;
 	global $notimeupdate, $_msg_invalidpass, $do_update_diff_table;
 
@@ -190,11 +189,12 @@ function plugin_edit_write()
 	// Collision Detection
 	$oldpagesrc = join('', get_source($page));
 	$oldpagemd5 = md5($oldpagesrc);
-	if ($digest != $oldpagemd5) {
+	if ($digest !== $oldpagemd5) {
 		$vars['digest'] = $oldpagemd5; // Reset
 
 		$original = isset($vars['original']) ? $vars['original'] : '';
-		list($postdata_input, $auto) = do_update_diff($oldpagesrc, $msg, $original);
+		$old_body = remove_author_info($oldpagesrc);
+		list($postdata_input, $auto) = do_update_diff($old_body, $msg, $original);
 
 		$retvars['msg' ] = $_title_collided;
 		$retvars['body'] = ($auto ? $_msg_collided_auto : $_msg_collided) . "\n";
@@ -221,9 +221,6 @@ function plugin_edit_write()
 		page_write($page, $postdata);
 		$retvars['msg' ] = $_title_deleted;
 		$retvars['body'] = str_replace('$1', htmlsc($page), $_title_deleted);
-
-		if ($trackback) tb_delete($page);
-
 		return $retvars;
 	}
 
@@ -238,7 +235,7 @@ function plugin_edit_write()
 
 	page_write($page, $postdata, $notimeupdate != 0 && $notimestamp);
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . rawurlencode($page));
+	header('Location: ' . get_script_uri() . '?' . pagename_urlencode($page));
 	exit;
 }
 
@@ -247,8 +244,6 @@ function plugin_edit_cancel()
 {
 	global $vars;
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . rawurlencode($vars['page']));
+	header('Location: ' . get_script_uri() . '?' . pagename_urlencode($vars['page']));
 	exit;
 }
-
-?>

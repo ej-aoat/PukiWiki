@@ -177,7 +177,7 @@ function _plugin_paraedit_mkeditlink($body)
 {
 	// [edit]リンクの作成
 	global $script, $get, $post, $vars;
-	$lines = split("\n", $body);
+	$lines = explode("\n", $body);
 	
 	$para_num = 1;
 	$lines2 = array();

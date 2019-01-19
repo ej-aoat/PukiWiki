@@ -267,7 +267,7 @@ function do_search($word, $type = 'AND', $non_format = FALSE, $base = '')
 	if (empty($pages))
 		return str_replace('$1', $s_word, $_msg_notfoundresult);
 
-	ksort($pages);
+	ksort($pages, SORT_STRING);
 
 	$retval = '<ul>' . "\n";
 	foreach (array_keys($pages) as $page) {
@@ -293,18 +293,29 @@ function arg_check($str)
 	return isset($vars['cmd']) && (strpos($vars['cmd'], $str) === 0);
 }
 
-// Encode page-name
-function encode($key)
+function _pagename_urlencode_callback($matches)
 {
-	return ($key == '') ? '' : strtoupper(bin2hex($key));
+	return rawurlencode($matches[0]);
+}
+
+function pagename_urlencode($page)
+{
+	return preg_replace_callback('|[^/:]+|', '_pagename_urlencode_callback', $page);
+}
+
+// Encode page-name
+function encode($str)
+{
+	$str = strval($str);
+	return ($str == '') ? '' : strtoupper(bin2hex($str));
 	// Equal to strtoupper(join('', unpack('H*0', $key)));
 	// But PHP 4.3.10 says 'Warning: unpack(): Type H: outside of string in ...'
 }
 
 // Decode page name
-function decode($key)
+function decode($str)
 {
-	return pkwk_hex2bin($key);
+	return pkwk_hex2bin($str);
 }
 
 // Inversion of bin2hex()
@@ -355,7 +366,7 @@ function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 	}
 
 	foreach($pages as $file=>$page) {
-		$r_page  = rawurlencode($page);
+		$r_page  = pagename_urlencode($page);
 		$s_page  = htmlsc($page, ENT_QUOTES);
 		$passage = get_pg_passage($page);
 
@@ -382,12 +393,12 @@ function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 			}
 		} else {
 			$head = (preg_match('/^([A-Za-z])/', $page, $matches)) ? $matches[1] :
-				(preg_match('/^([ -~])/', $page, $matches) ? $symbol : $other);
+				(preg_match('/^([ -~])/', $page) ? $symbol : $other);
 		}
 
 		$list[$head][$page] = $str;
 	}
-	ksort($list);
+	ksort($list, SORT_STRING);
 
 	$cnt = 0;
 	$arr_index = array();
@@ -408,7 +419,7 @@ function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 				'"><strong>' . $head . '</strong></a>' . "\n" .
 				'  <ul>' . "\n";
 		}
-		ksort($pages);
+		ksort($pages, SORT_STRING);
 		$retval .= join("\n", $pages);
 		if ($list_index)
 			$retval .= "\n  </ul>\n </li>\n";
@@ -475,6 +486,14 @@ function getmicrotime()
 	return ((float)$sec + (float)$usec);
 }
 
+// Elapsed time by second
+//define('MUTIME', getmicrotime());
+function elapsedtime()
+{
+	$at_the_microtime = MUTIME;
+	return sprintf('%01.03f', getmicrotime() - $at_the_microtime);
+}
+
 // Get the date
 function get_date($format, $timestamp = NULL)
 {
@@ -528,7 +547,7 @@ function get_autolink_pattern(& $pages)
 {
 	global $WikiName, $autolink, $nowikiname;
 
-	$config = &new Config('AutoLink');
+	$config = new Config('AutoLink');
 	$config->read();
 	$ignorepages      = $config->get('IgnoreList');
 	$forceignorepages = $config->get('ForceIgnoreList');
@@ -694,7 +713,7 @@ function csv_implode($glue, $pieces)
 	$_glue = ($glue != '') ? '\\' . $glue{0} : '';
 	$arr = array();
 	foreach ($pieces as $str) {
-		if (ereg('[' . $_glue . '"' . "\n\r" . ']', $str))
+		if (preg_match('/[' . '"' . "\n\r" . $_glue . ']/', $str))
 			$str = '"' . str_replace('"', '""', $str) . '"';
 		$arr[] = $str;
 	}
@@ -765,4 +784,4 @@ if (! function_exists('sha1')) {
 		}
 	}
 }
-?>
+

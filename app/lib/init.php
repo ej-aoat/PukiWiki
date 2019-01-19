@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: init.php,v 1.57 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+// init.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -10,17 +10,25 @@
 
 // PukiWiki version / Copyright / Licence
 
-define('S_VERSION', '1.5.0');
+define('S_VERSION', '1.5.1');
 define('S_COPYRIGHT',
 	'<strong>PukiWiki ' . S_VERSION . '</strong>' .
-	' Copyright &copy; 2001-2006' .
-	' <a href="http://pukiwiki.sourceforge.jp/">PukiWiki Developers Team</a>.' .
-	' License is <a href="http://www.gnu.org/licenses/gpl.html">GPL</a>.<br />' .
-	' Based on "PukiWiki" 1.3 by <a href="http://factage.com/yu-ji/">yu-ji</a>'
+	' &copy; 2001-2016' .
+	' <a href="http://pukiwiki.osdn.jp/">PukiWiki Development Team</a>'
 );
 
 /////////////////////////////////////////////////
+// Session security options
+
+ini_set('session.use_strict_mode', 1);
+ini_set('session.use_cookies', 1);
+ini_set('session.use_only_cookies', 1);
+
+/////////////////////////////////////////////////
 // Init server variables
+
+// Comapat and suppress notices
+if (!isset($HTTP_SERVER_VARS)) $HTTP_SERVER_VARS = array();
 
 foreach (array('SCRIPT_NAME', 'SERVER_ADMIN', 'SERVER_NAME',
 	'SERVER_PORT', 'SERVER_SOFTWARE') as $key) {
@@ -68,13 +76,13 @@ if ($die) die_message(nl2br("\n\n" . $die));
 switch (LANG){
 case 'en': define('MB_LANGUAGE', 'English' ); break;
 case 'ja': define('MB_LANGUAGE', 'Japanese'); break;
-case 'ko': define('MB_LANGUAGE', 'Korean'  ); break;
-	// See BugTrack2/13 for all hack about Korean support,
-	// and give us your report!
+case 'ko': define('MB_LANGUAGE', 'Korean'  ); break; //UTF-8 only
+	// See BugTrack2/13 for all hack about Korean support, //UTF-8 only
+	// and give us your report!                            //UTF-8 only
 default: die_message('No such language "' . LANG . '"'); break;
 }
 
-define('PKWK_UTF8_ENABLE', 1);
+define('PKWK_UTF8_ENABLE', 1); //UTF-8 only
 if (defined('PKWK_UTF8_ENABLE')) {
 	define('SOURCE_ENCODING', 'UTF-8');
 	define('CONTENT_CHARSET', 'UTF-8');
@@ -201,7 +209,7 @@ unset($die, $temp);
 // 必須のページが存在しなければ、空のファイルを作成する
 
 foreach(array($defaultpage, $whatsnew, $interwiki) as $page){
-	if (! is_page($page)) touch(get_filename($page));
+	if (! is_page($page)) pkwk_touch_file(get_filename($page));
 }
 
 /////////////////////////////////////////////////
@@ -265,7 +273,9 @@ if (isset($_GET['encode_hint']) && $_GET['encode_hint'] != '')
 // cmdもpluginも指定されていない場合は、QUERY_STRINGを
 // ページ名かInterWikiNameであるとみなす
 $arg = '';
-if (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING']) {
+if (isset($_SERVER['QUERY_STRING']) && $_SERVER['QUERY_STRING'] != '') {
+	global $g_query_string;
+	$g_query_string = $_SERVER['QUERY_STRING'];
 	$arg = & $_SERVER['QUERY_STRING'];
 } else if (isset($_SERVER['argv']) && ! empty($_SERVER['argv'])) {
 	$arg = & $_SERVER['argv'][0];
@@ -348,16 +358,12 @@ if (isset($get['md5']) && $get['md5'] != '' &&
 	$get['cmd'] = $post['cmd'] = $vars['cmd'] = 'md5';
 }
 
-// TrackBack Ping
-if (isset($vars['tb_id']) && $vars['tb_id'] != '') {
-	$get['cmd'] = $post['cmd'] = $vars['cmd'] = 'tb';
-}
-
 // cmdもpluginも指定されていない場合は、QUERY_STRINGをページ名かInterWikiNameであるとみなす
 if (! isset($vars['cmd']) && ! isset($vars['plugin'])) {
 
 	$get['cmd']  = $post['cmd']  = $vars['cmd']  = 'read';
 
+	$arg = preg_replace("#^([^&]*)&.*$#", "$1", $arg);
 	if ($arg == '') $arg = $defaultpage;
 	$arg = rawurldecode($arg);
 	$arg = strip_bracket($arg);
@@ -382,7 +388,7 @@ $BracketName = '(?!\s):?[^\r\n\t\f\[\]<>#&":]+:?(?<!\s)';
 $InterWikiName = '(\[\[)?((?:(?!\s|:|\]\]).)+):(.+)(?(1)\]\])';
 
 // 注釈
-$NotePattern = '/\(\(((?:(?>(?:(?!\(\()(?!\)\)(?:[^\)]|$)).)+)|(?R))*)\)\)/ex';
+$NotePattern = '/\(\(((?:(?>(?:(?!\(\()(?!\)\)(?:[^\)]|$)).)+)|(?R))*)\)\)/x';
 
 /////////////////////////////////////////////////
 // 初期設定(ユーザ定義ルール読み込み)
@@ -410,5 +416,3 @@ $line_rules = array_merge(array(
 	'&amp;(#[0-9]+|#x[0-9a-f]+|' . $entity_pattern . ');' => '&$1;',
 	"\r"          => '<br />' . "\n",	/* 行末にチルダは改行 */
 ), $line_rules);
-
-?>

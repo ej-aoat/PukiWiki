@@ -5,8 +5,8 @@
 // $Id: areaedit.inc.php,v 0.18 2004/08/30 00:55:10 sha Exp $
 //
 /* 
-*¥×¥é¥°¥¤¥ó areaedit
- »ØÄê¤·¤¿°ÌÃÖ¤Î¤ßÊÔ½¸²ÄÇ½¤Ë¤¹¤ë
+*ãƒ—ãƒ©ã‚°ã‚¤ãƒ³ areaedit
+ æŒ‡å®šã—ãŸä½ç½®ã®ã¿ç·¨é›†å¯èƒ½ã«ã™ã‚‹
 
 *Usage
  #areaedit([start|end|btn:<text>|nofreeze|noauth|collect[:<page>]])
@@ -14,7 +14,7 @@
 
 */
 /////////////////////////////////////////////////
-// ¥×¥ì¥Ó¥å¡¼¤ÇÊÔ½¸¸Ä½ê¤è¤êÁ°¤ÎÉôÊ¬¤âÉ½¼¨¤¹¤ë¥â¡¼¥É
+// ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼ã§ç·¨é›†å€‹æ‰€ã‚ˆã‚Šå‰ã®éƒ¨åˆ†ã‚‚è¡¨ç¤ºã™ã‚‹ãƒ¢ãƒ¼ãƒ‰
 define('PREVIEW_DISP_ABOVE',TRUE);
 
 function plugin_areaedit_init()
@@ -22,19 +22,19 @@ function plugin_areaedit_init()
 	$messages = array(
 		'_areaedit_messages' => array(
 			'title_error'    => 'Error in areaedit',
-			'body_error'     => 'Í½´ü¤·¤Ê¤¤¥¨¥é¡¼¤Ç¤¹¡£Àµ¾ï¤Ê¸Æ½Ğ¤·¤Ç¤Ï¤¢¤ê¤Ş¤»¤ó¡£',
-			'no_page_error'  => '$1 ¤Î¥Ú¡¼¥¸¤ÏÂ¸ºß¤·¤Ş¤»¤ó',
-			'btn_name'       => '[ÊÔ½¸]',
-			'btn_name_collect' => '¼ı½¸',
+			'body_error'     => 'äºˆæœŸã—ãªã„ã‚¨ãƒ©ãƒ¼ã§ã™ã€‚æ­£å¸¸ãªå‘¼å‡ºã—ã§ã¯ã‚ã‚Šã¾ã›ã‚“ã€‚',
+			'no_page_error'  => '$1 ã®ãƒšãƒ¼ã‚¸ã¯å­˜åœ¨ã—ã¾ã›ã‚“',
+			'btn_name'       => '[ç·¨é›†]',
+			'btn_name_collect' => 'åé›†',
 			'btn_name_inline'=> '[e]',
-//			'msg_cannotedit' => '[ÊÔ½¸¶Ø»ß]',
+//			'msg_cannotedit' => '[ç·¨é›†ç¦æ­¢]',
 			'msg_cannotedit' => '',
 //			'msg_cannotedit_inline' => '[x]',
 			'msg_cannotedit_inline' => '',
 			'msg_unfreeze_inline' => '[uf]',
-			'title_auth'     => '$1¤Ë¤ÏÊÔ½¸¸¢¸Â¤¬¤¢¤ê¤Ş¤»¤ó¡£',
-			'title_edit'     => '\'$1\' ¤ÎÂè$2 areaedit¤ÎÊÔ½¸',
-			'title_preview'  => '\'$1\' ¤ÎÂè$2 areaedit¤Î¥×¥ì¥Ó¥å¡¼',
+			'title_auth'     => '$1ã«ã¯ç·¨é›†æ¨©é™ãŒã‚ã‚Šã¾ã›ã‚“ã€‚',
+			'title_edit'     => '\'$1\' ã®ç¬¬$2 areaeditã®ç·¨é›†',
+			'title_preview'  => '\'$1\' ã®ç¬¬$2 areaeditã®ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼',
 		),
 	);
 	set_plugin_messages($messages);
@@ -450,7 +450,7 @@ function plugin_areaedit_action_block()
 	
 	$update_flag = FALSE;
 	if ( array_key_exists('areaedit_msg', $vars) ){
-		$lines = split("\n", str_replace("\r",'',$vars['areaedit_msg']));
+		$lines = expose("\n", str_replace("\r",'',$vars['areaedit_msg']));
 		$update_flag = TRUE;
 	}
 	else if ( $collect ){
@@ -516,13 +516,13 @@ function plugin_areaedit_collect($page,$postdata_old){
 	return $outputs;
 }
 //========================================================
-// ¥×¥ì¥Ó¥å¡¼
+// ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼
 function plugin_areaedit_preview($refer,$targetdata,$headdata,$taildata,$inline_flag)
 {
 	global $script,$vars;
 	global $_areaedit_messages,$_msg_preview;
 
-	// ¼ê½ñ¤­¤Î#freeze¤òºï½ü
+	// æ‰‹æ›¸ãã®#freezeã‚’å‰Šé™¤
 	$msg = $postdata_input = preg_replace('/^#freeze\s*$/m','',$targetdata);
 
 	$preview_above = '';
@@ -575,7 +575,7 @@ function plugin_areaedit_strip_link($str){
 	return $str;
 }
 //========================================================
-// ½ñ¤­¹ş¤ß
+// æ›¸ãè¾¼ã¿
 function plugin_areaedit_write($refer, $postdata_input, $postdata,$areaedit_no)
 {
 	global $script,$vars;
@@ -583,7 +583,7 @@ function plugin_areaedit_write($refer, $postdata_input, $postdata,$areaedit_no)
 	
 	$retvars = array();
 	
-// ¼ê½ñ¤­¤Î#freeze¤òºï½ü¡£¤³¤Î¥³¥á¥ó¥È¤ò³°¤·¤Æ¤Ï¤¤¤±¤Ê¤¤¡£
+// æ‰‹æ›¸ãã®#freezeã‚’å‰Šé™¤ã€‚ã“ã®ã‚³ãƒ¡ãƒ³ãƒˆã‚’å¤–ã—ã¦ã¯ã„ã‘ãªã„ã€‚
 //	$postdata = preg_replace('/^#freeze\s*$/m','',$postdata);
 	
 	$oldpagesrc = join('',get_source($refer));
@@ -624,7 +624,7 @@ function plugin_areaedit_write($refer, $postdata_input, $postdata,$areaedit_no)
 	return $retvars;
 }
 //========================================================
-// ÊÔ½¸¥Õ¥©¡¼¥à¤ÎÉ½¼¨
+// ç·¨é›†ãƒ•ã‚©ãƒ¼ãƒ ã®è¡¨ç¤º
 function areaedit_form($page, $postdata_input, $headdata, $taildata, $digest = 0)
 {
 	global $script,$vars,$rows,$cols,$hr,$function_freeze;
@@ -643,7 +643,7 @@ function areaedit_form($page, $postdata_input, $headdata, $taildata, $digest = 0
 	$s_headdata = htmlspecialchars( $headdata );
 	$s_taildata = htmlspecialchars( $taildata );
 	$s_original = array_key_exists('original',$vars) ? htmlspecialchars($vars['original']) : $s_headdata . $s_postdata_input . $s_taildata;
-	$b_preview = array_key_exists('preview',$vars); // ¥×¥ì¥Ó¥å¡¼ÃæTRUE
+	$b_preview = array_key_exists('preview',$vars); // ãƒ—ãƒ¬ãƒ“ãƒ¥ãƒ¼ä¸­TRUE
 	$btn_preview = $b_preview ? $_btn_repreview : $_btn_preview;
 	
 	$body = <<<EOD

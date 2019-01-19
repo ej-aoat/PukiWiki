@@ -45,10 +45,10 @@ function plugin_rename_action()
 		} else if (! is_page($refer)) {
 			return plugin_rename_phase1('notpage', $refer);
 
-		} else if ($refer == $whatsnew) {
+		} else if ($refer === $whatsnew) {
 			return plugin_rename_phase1('norename', $refer);
 
-		} else if ($page == '' || $page == $refer) {
+		} else if ($page == '' || $page === $refer) {
 			return plugin_rename_phase2();
 
 		} else if (! is_pagename($page)) {
@@ -166,7 +166,7 @@ $msg
 EOD;
 	if (! empty($related)) {
 		$ret['body'] .= '<hr /><p>' . $_rename_messages['msg_related'] . '</p><ul>';
-		sort($related);
+		sort($related, SORT_STRING);
 		foreach ($related as $name)
 			$ret['body'] .= '<li>' . make_pagelink($name) . '</li>';
 		$ret['body'] .= '</ul>';
@@ -286,7 +286,7 @@ function plugin_rename_phase3($pages)
 <p>{$_rename_messages['msg_confirm']}</p>
 EOD;
 
-	ksort($pages);
+	ksort($pages, SORT_STRING);
 	$ret['body'] .= '<ul>' . "\n";
 	foreach ($pages as $old=>$new)
 		$ret['body'] .= '<li>' .  make_pagelink(decode($old)) .
@@ -307,21 +307,20 @@ function plugin_rename_get_files($pages)
 	$matches = array();
 	foreach ($dirs as $path) {
 		$dir = opendir($path);
-		if (! $dir) continue;
-
-		while ($file = readdir($dir)) {
+		if (! $dir) continue;	// TODO: !== FALSE or die()?
+		while (($file = readdir($dir)) !== FALSE) {
 			if ($file == '.' || $file == '..') continue;
-
-			foreach ($pages as $from=>$to) {
+			foreach ($pages as $from => $to) {
+				// TODO: preg_quote()?
 				$pattern = '/^' . str_replace('/', '\/', $from) . '([._].+)$/';
-				if (! preg_match($pattern, $file, $matches))
-					continue;
-
-				$newfile = $to . $matches[1];
-				$files[$from][$path . $file] = $path . $newfile;
+				if (preg_match($pattern, $file, $matches)) {
+					$newfile = $to . $matches[1];
+					$files[$from][$path . $file] = $path . $newfile;
+				}
 			}
 		}
 	}
+
 	return $files;
 }
 
@@ -384,7 +383,7 @@ function plugin_rename_proceed($pages, $files, $exists)
 	if ($page == '') $page = PLUGIN_RENAME_LOGPAGE;
 
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . rawurlencode($page));
+	header('Location: ' . get_script_uri() . '?' . pagename_urlencode($page));
 	exit;
 }
 
@@ -394,7 +393,7 @@ function plugin_rename_getrelated($page)
 	$pages = get_existpages();
 	$pattern = '/(?:^|\/)' . preg_quote(strip_bracket($page), '/') . '(?:\/|$)/';
 	foreach ($pages as $name) {
-		if ($name == $page) continue;
+		if ($name === $page) continue;
 		if (preg_match($pattern, $name)) $related[] = $name;
 	}
 	return $related;
@@ -406,14 +405,14 @@ function plugin_rename_getselecttag($page)
 
 	$pages = array();
 	foreach (get_existpages() as $_page) {
-		if ($_page == $whatsnew) continue;
+		if ($_page === $whatsnew) continue;
 
-		$selected = ($_page == $page) ? ' selected' : '';
+		$selected = ($_page === $page) ? ' selected' : '';
 		$s_page = htmlsc($_page);
 		$pages[$_page] = '<option value="' . $s_page . '"' . $selected . '>' .
 			$s_page . '</option>';
 	}
-	ksort($pages);
+	ksort($pages, SORT_STRING);
 	$list = join("\n" . ' ', $pages);
 
 	return <<<EOD
@@ -424,4 +423,4 @@ function plugin_rename_getselecttag($page)
 EOD;
 
 }
-?>
+

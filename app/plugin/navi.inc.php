@@ -97,13 +97,19 @@ function plugin_navi_convert()
 		$pages   = array_unique($pages);
 		natcasesort($pages);
 		if ($reverse) $pages = array_reverse($pages);
-
+		$pages = array_values($pages);
 		$prev = $home;
-		foreach ($pages as $page) {
-			if ($page == $current) break;
+		$next = '';
+		foreach ($pages as $index=>$page) {
+			if ($page === $current) {
+				$next_key = $index + 1;
+				if (array_key_exists($next_key, $pages)) {
+					$next = $pages[$next_key];
+				}
+				break;
+			}
 			$prev = $page;
 		}
-		$next = current($pages);
 
 		$pos = strrpos($current, '/');
 		$up = '';
@@ -129,7 +135,7 @@ function plugin_navi_convert()
 			    'prev'=>$prev, 'up'=>$up) as $rel=>$_page) {
 				if ($_page != '') {
 					$s_page = htmlsc($_page);
-					$r_page = rawurlencode($_page);
+					$r_page = pagename_urlencode($_page);
 					$head_tags[] = ' <link rel="' .
 						$rel . '" href="' . $script .
 						'?' . $r_page . '" title="' .
@@ -154,7 +160,7 @@ function plugin_navi_convert()
 		} else {
 			$ret .= '<ul>';
 			foreach ($pages as $page)
-				if ($page != $home)
+				if ($page !== $home)
 					$ret .= ' <li>' . make_pagelink($page) . '</li>';
 			$ret .= '</ul>';
 		}
@@ -183,4 +189,4 @@ EOD;
 	}
 	return $ret;
 }
-?>
+

@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: en.lng.php,v 1.15 2006/04/10 17:36:56 teanan Exp $
-// Copyright (C)
-//   2002-2005 PukiWiki Developers Team
+// en.lng.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -71,6 +71,7 @@ $_btn_template  = 'Use page as template';
 $_btn_load      = 'Load';
 $_btn_edit      = 'Edit';
 $_btn_delete    = 'Delete';
+$_label_template_pages	= 'Template pages';
 
 ///////////////////////////////////////
 // Authentication
@@ -81,10 +82,6 @@ $_msg_auth         = 'PukiWikiAuth';
 // Page name
 $rule_page = 'FormattingRules';	// Formatting rules
 $help_page = 'Help';		// Help
-
-///////////////////////////////////////
-// TrackBack (REMOVED)
-$_tb_date   = 'F j, Y, g:i A';
 
 /////////////////////////////////////////////////
 // No subject (article)
@@ -110,7 +107,6 @@ $_LANG['skin']['list']      = 'List of pages';
 $_LANG['skin']['new']       = 'New';
 $_LANG['skin']['rdf']       = 'RDF of recent changes';
 $_LANG['skin']['recent']    = 'Recent changes';	// RecentChanges
-$_LANG['skin']['refer']     = 'Referer';	// Show list of referer
 $_LANG['skin']['reload']    = 'Reload';
 $_LANG['skin']['rename']    = 'Rename';	// Rename a page (and related)
 $_LANG['skin']['rss']       = 'RSS of recent changes';
@@ -118,9 +114,10 @@ $_LANG['skin']['rss10']     = & $_LANG['skin']['rss'];
 $_LANG['skin']['rss20']     = & $_LANG['skin']['rss'];
 $_LANG['skin']['search']    = 'Search';
 $_LANG['skin']['top']       = 'Front page';	// Top page
-$_LANG['skin']['trackback'] = 'Trackback';	// Show list of trackback
 $_LANG['skin']['unfreeze']  = 'Unfreeze';
-$_LANG['skin']['upload']    = 'Upload';	// Attach a file
+$_LANG['skin']['upload']    = 'Attach';	// Attach a file
+$_LANG['skin']['login']     = 'Log in';
+$_LANG['skin']['logout']    = 'Log out';
 
 ///////////////////////////////////////
 // Plug-in message
@@ -228,6 +225,8 @@ $_msg_comment = 'Comment: ';
 $_title_comment_collided = 'On updating  $1, a collision has occurred.';
 $_msg_comment_collided   = 'It seems that someone has already updated the page you were editing.<br />
  The comment was added, alhough it may be inserted in the wrong position.<br />';
+$_comment_plugin_fail_msg = 'It seems that someone has already updated the page you were editing.<br />
+ Failed to add the comment.<br />';
 
 ///////////////////////////////////////
 // deleted.inc.php
@@ -330,19 +329,6 @@ $_recent_plugin_frame = '<h5>recent(%d)</h5>
  <div>%s</div>';
 
 ///////////////////////////////////////
-// referer.inc.php
-$_referer_msg = array(
-	'msg_H0_Refer'       => 'Referer',
-	'msg_Hed_LastUpdate' => 'LastUpdate',
-	'msg_Hed_1stDate'    => 'First Register',
-	'msg_Hed_RefCounter' => 'RefCounter',
-	'msg_Hed_Referer'    => 'Referer',
-	'msg_Fmt_Date'       => 'F j, Y, g:i A',
-	'msg_Chr_uarr'       => '&uArr;',
-	'msg_Chr_darr'       => '&dArr;',
-);
-
-///////////////////////////////////////
 // rename.inc.php
 $_rename_messages  = array(
 	'err'            => '<p>error:%s</p>',
@@ -440,4 +426,12 @@ $_vote_plugin_votes  = 'Vote';
 // yetlist.inc.php
 $_title_yetlist = 'List of pages which have not yet been created.';
 $_err_notexist  = 'All pages have been created.';
-?>
+
+///////////////////////////////////////
+// loginform.inc.php
+$_loginform_messages = array(
+	'username' => 'Username',
+	'password' => 'Password',
+	'login' => 'Log in',
+	'invalid_username_or_password' => 'The username or password you entered is incorrect'
+);

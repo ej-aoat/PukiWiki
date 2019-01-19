@@ -88,7 +88,7 @@ function plugin_article_action()
 	$postdata_input = $article . "\n";
 	$body = '';
 
-	if (md5(@join('', get_source($post['refer']))) != $post['digest']) {
+	if (md5(get_source($post['refer'], TRUE, TRUE)) !== $post['digest']) {
 		$title = $_title_collided;
 
 		$body = $_msg_collided . "\n";
@@ -121,7 +121,7 @@ EOD;
 			$mailbody .= "\n\n" . '---' . "\n";
 			$mailbody .= $_msg_article_mail_sender . $post['name'] . ' (' . $now . ')' . "\n";
 			$mailbody .= $_msg_article_mail_page . $post['refer'] . "\n";
-			$mailbody .= '　 URL: ' . $script . '?' . rawurlencode($post['refer']) . "\n";
+			$mailbody .= '   URL: ' . $script . '?' . pagename_urlencode($post['refer']) . "\n";
 			$mailbody = mb_convert_encoding($mailbody, 'JIS');
 
 			$mailaddheader = 'From: ' . PLUGIN_ARTICLE_MAIL_FROM;
@@ -177,4 +177,4 @@ EOD;
 
 	return $string;
 }
-?>
+

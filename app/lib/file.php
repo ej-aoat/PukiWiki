@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: file.php,v 1.95 2011/01/25 15:01:01 henoheno Exp $
+// file.php
 // Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -16,26 +16,45 @@ define('PKWK_MAXSHOW_CACHE', 'recent.dat');
 define('PKWK_AUTOLINK_REGEX_CACHE', 'autolink.dat');
 
 // Get source(wiki text) data of the page
+// Returns FALSE if error occurerd
 function get_source($page = NULL, $lock = TRUE, $join = FALSE)
 {
+	//$result = NULL;	// File is not found
 	$result = $join ? '' : array();
+		// Compat for "implode('', get_source($file))",
+		// 	-- this is slower than "get_source($file, TRUE, TRUE)"
+		// Compat for foreach(get_source($file) as $line) {} not to warns
 
-	if (is_page($page)) {
-		$path  = get_filename($page);
+	$path = get_filename($page);
+	if (file_exists($path)) {
 
 		if ($lock) {
 			$fp = @fopen($path, 'r');
-			if ($fp == FALSE) return $result;
+			if ($fp === FALSE) return FALSE;
 			flock($fp, LOCK_SH);
 		}
 
 		if ($join) {
 			// Returns a value
-			$result = str_replace("\r", '', fread($fp, filesize($path)));
+			$size = filesize($path);
+			if ($size === FALSE) {
+				$result = FALSE;
+			} else if ($size == 0) {
+				$result = '';
+			} else {
+				$result = fread($fp, $size);
+				if ($result !== FALSE) {
+					// Removing line-feeds
+					$result = str_replace("\r", '', $result);
+				}
+			}
 		} else {
 			// Returns an array
-			// Removing line-feeds: Because file() doesn't remove them.
-			$result = str_replace("\r", '', file($path));
+			$result = file($path);
+			if ($result !== FALSE) {
+				// Removing line-feeds
+				$result = str_replace("\r", '', $result);
+			}
 		}
 
 		if ($lock) {
@@ -62,37 +81,31 @@ function get_filename($page)
 // Put a data(wiki text) into a physical file(diff, backup, text)
 function page_write($page, $postdata, $notimestamp = FALSE)
 {
-	global $trackback;
-
 	if (PKWK_READONLY) return; // Do nothing
 
 	$postdata = make_str_rules($postdata);
+	$text_without_author = remove_author_info($postdata);
+	$postdata = add_author_info($text_without_author);
+	$is_delete = empty($text_without_author);
 
-	// Create and write diff
+	// Do nothing when it has no changes
 	$oldpostdata = is_page($page) ? join('', get_source($page)) : '';
+	$oldtext_without_author = remove_author_info($oldpostdata);
+	if ($text_without_author === $oldtext_without_author) {
+		// Do nothing on updating with unchanged content
+		return;
+	}
+	// Create and write diff
 	$diffdata    = do_diff($oldpostdata, $postdata);
 	file_write(DIFF_DIR, $page, $diffdata);
 
 	// Create backup
-	make_backup($page, $postdata == ''); // Is $postdata null?
+	make_backup($page, $is_delete, $postdata); // Is $postdata null?
 
 	// Create wiki text
-	file_write(DATA_DIR, $page, $postdata, $notimestamp);
-
-	if ($trackback) {
-		// TrackBack Ping
-		$_diff = explode("\n", $diffdata);
-		$plus  = join("\n", preg_replace('/^\+/', '', preg_grep('/^\+/', $_diff)));
-		$minus = join("\n", preg_replace('/^-/',  '', preg_grep('/^-/',  $_diff)));
-		tb_send($page, $plus, $minus);
-	}
+	file_write(DATA_DIR, $page, $postdata, $notimestamp, $is_delete);
 
 	links_update($page);
-
-	// From Ajaxtree Plugin
-	if (exist_plugin('ajaxtree')) {
-		plugin_ajaxtree_write_after();
-	}
 }
 
 // Modify original text with user-defined / system-defined rules
@@ -154,6 +167,38 @@ function make_str_rules($source)
 	return implode("\n", $lines);
 }
 
+function add_author_info($wikitext)
+{
+	global $auth_user, $auth_user_fullname;
+	$author = preg_replace('/"/', '', $auth_user);
+	$fullname = $auth_user_fullname;
+	if (!$fullname && $author) {
+		// Fullname is empty, use $author as its fullname
+		$fullname = preg_replace('/^[^:]*:/', '', $author);
+	}
+	$displayname = preg_replace('/"/', '', $fullname);
+	$user_prefix = get_auth_user_prefix();
+	$author_text = sprintf('#author("%s","%s","%s")',
+		get_date_atom(UTIME + LOCALZONE),
+		($author ? $user_prefix . $author : ''),
+		$displayname) . "\n";
+	return $author_text . $wikitext;
+}
+
+function remove_author_info($wikitext)
+{
+	return preg_replace('/^\s*#author\([^\n]*(\n|$)/m', '', $wikitext);
+}
+
+function get_date_atom($timestamp)
+{
+	// Compatible with DATE_ATOM format
+	// return date(DATE_ATOM, $timestamp);
+	$zmin = abs(LOCALZONE / 60);
+	return date('Y-m-d\TH:i:s', $timestamp) . sprintf('%s%02d:%02d',
+		(LOCALZONE < 0 ? '-' : '+') , $zmin / 60, $zmin % 60);
+}
+
 // Generate ID
 function generate_fixed_heading_anchor_id($seed)
 {
@@ -187,7 +232,7 @@ function file_head($file, $count = 1, $lock = TRUE, $buffer = 8192)
 }
 
 // Output to a file
-function file_write($dir, $page, $str, $notimestamp = FALSE)
+function file_write($dir, $page, $str, $notimestamp = FALSE, $is_delete = FALSE)
 {
 	global $_msg_invalidiwn, $notify, $notify_diff_only, $notify_subject;
 	global $whatsdeleted, $maxshow_deleted;
@@ -202,7 +247,7 @@ function file_write($dir, $page, $str, $notimestamp = FALSE)
 	// ----
 	// Delete?
 
-	if ($dir == DATA_DIR && $str === '') {
+	if ($dir == DATA_DIR && $is_delete) {
 		// Page deletion
 		if (! $file_exists) return; // Ignore null posting for DATA_DIR
 
@@ -261,7 +306,7 @@ function file_write($dir, $page, $str, $notimestamp = FALSE)
 		if ($notify_diff_only) $str = preg_replace('/^[^-+].*\n/m', '', $str);
 		$footer['ACTION'] = 'Page update';
 		$footer['PAGE']   = & $page;
-		$footer['URI']    = get_script_uri() . '?' . rawurlencode($page);
+		$footer['URI']    = get_script_uri() . '?' . pagename_urlencode($page);
 		$footer['USER_AGENT']  = TRUE;
 		$footer['REMOTE_ADDR'] = TRUE;
 		pkwk_mail_notify($notify_subject, $str, $footer) or
@@ -411,7 +456,7 @@ function put_lastmodified()
 	// Check ALL filetime
 	$recent_pages = array();
 	foreach($pages as $page)
-		if ($page != $whatsnew && ! check_non_list($page))
+		if ($page !== $whatsnew && ! check_non_list($page))
 			$recent_pages[$page] = get_filetime($page);
 
 	// Sort decending order of last-modification date
@@ -506,21 +551,36 @@ function header_lastmod($page = NULL)
 	}
 }
 
+// Get a list of encoded files (must specify a directory and a suffix)
+function get_existfiles($dir = DATA_DIR, $ext = '.txt')
+{
+	$aryret = array();
+	$pattern = '/^(?:[0-9A-F]{2})+' . preg_quote($ext, '/') . '$/';
+
+	$dp = @opendir($dir) or die_message($dir . ' is not found or not readable.');
+	while (($file = readdir($dp)) !== FALSE) {
+		if (preg_match($pattern, $file)) {
+			$aryret[] = $dir . $file;
+		}
+	}
+	closedir($dp);
+
+	return $aryret;
+}
+
 // Get a page list of this wiki
 function get_existpages($dir = DATA_DIR, $ext = '.txt')
 {
 	$aryret = array();
+	$pattern = '/^((?:[0-9A-F]{2})+)' . preg_quote($ext, '/') . '$/';
 
-	$pattern = '((?:[0-9A-F]{2})+)';
-	if ($ext != '') $ext = preg_quote($ext, '/');
-	$pattern = '/^' . $pattern . $ext . '$/';
-
-	$dp = @opendir($dir) or
-		die_message($dir . ' is not found or not readable.');
+	$dp = @opendir($dir) or die_message($dir . ' is not found or not readable.');
 	$matches = array();
-	while ($file = readdir($dp))
-		if (preg_match($pattern, $file, $matches))
+	while (($file = readdir($dp)) !== FALSE) {
+		if (preg_match($pattern, $file, $matches)) {
 			$aryret[$file] = decode($matches[1]);
+		}
+	}
 	closedir($dp);
 
 	return $aryret;
@@ -669,7 +729,7 @@ function get_readings()
 
 		if($unknownPage || $deletedPage) {
 
-			asort($readings); // Sort by pronouncing(alphabetical/reading) order
+			asort($readings, SORT_STRING); // Sort by pronouncing(alphabetical/reading) order
 			$body = '';
 			foreach ($readings as $page => $reading)
 				$body .= '-[[' . $page . ']] ' . $reading . "\n";
@@ -687,19 +747,6 @@ function get_readings()
 	return $readings;
 }
 
-// Get a list of encoded files (must specify a directory and a suffix)
-function get_existfiles($dir, $ext)
-{
-	$pattern = '/^(?:[0-9A-F]{2})+' . preg_quote($ext, '/') . '$/';
-	$aryret = array();
-	$dp = @opendir($dir) or die_message($dir . ' is not found or not readable.');
-	while ($file = readdir($dp))
-		if (preg_match($pattern, $file))
-			$aryret[] = $dir . $file;
-	closedir($dp);
-	return $aryret;
-}
-
 // Get a list of related pages of the page
 function links_get_related($page)
 {
@@ -709,7 +756,7 @@ function links_get_related($page)
 	if (isset($links[$page])) return $links[$page];
 
 	// If possible, merge related pages generated by make_link()
-	$links[$page] = ($page == $vars['page']) ? $related : array();
+	$links[$page] = ($page === $vars['page']) ? $related : array();
 
 	// Get repated pages from DB
 	$links[$page] += links_get_related_db($vars['page']);
@@ -794,4 +841,3 @@ function pkwk_touch_file($filename, $time = FALSE, $atime = FALSE)
 			htmlsc(basename($filename)));
 	}
 }
-?>

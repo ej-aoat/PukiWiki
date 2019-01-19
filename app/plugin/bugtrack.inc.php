@@ -5,11 +5,7 @@
 //   2002-2005, 2007 PukiWiki Developers Team
 //   2002 Y.MASUI GPL2  http://masui.net/pukiwiki/ masui@masui.net
 //
-// PukiWiki BugTrack plugin
-//
-// Copyright:
-// 2002-2005 PukiWiki Developers Team
-// 2002 Y.MASUI GPL2  http://masui.net/pukiwiki/ masui@masui.net
+// BugTrack plugin
 
 // Numbering format
 define('PLUGIN_BUGTRACK_NUMBER_FORMAT', '%d'); // Like 'page/1'
@@ -181,7 +177,7 @@ function plugin_bugtrack_action()
 		$post['version'], $post['body']);
 
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . rawurlencode($page));
+	header('Location: ' . get_script_uri() . '?' . pagename_urlencode($page));
 	exit;
 }
 
@@ -240,7 +236,7 @@ function plugin_bugtrack_template($base, $summary, $name, $priority, $state, $ca
 - ${_plugin_bugtrack['priority']}: $priority
 - ${_plugin_bugtrack['state'   ]}: $state
 - ${_plugin_bugtrack['category']}: $category
-- ${_plugin_bugtrack['date'    ]}: now?
+- ${_plugin_bugtrack['date'    ]}: &now;
 - ${_plugin_bugtrack['version' ]}: $version
 
 ** ${_plugin_bugtrack['body']}
@@ -355,4 +351,4 @@ function plugin_bugtrack_list_pageinfo($page, $no = NULL, $recurse = TRUE)
 
 	return array($page, $no, $summary, $name, $priority, $state, $category);
 }
-?>
+

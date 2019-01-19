@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: pukiwiki.skin.php,v 1.48 2006/03/07 14:03:02 henoheno Exp $
-// Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+// pukiwiki.skin.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -50,6 +50,9 @@ switch(UI_LANG){
 	case 'ja': $css_charset = 'Shift_JIS'; break;
 }
 
+// MenuBar
+$menu = arg_check('read') && exist_plugin_convert('menu') ? do_plugin_convert('menu') : FALSE;
+
 // ------------------------------------------------------------
 // Output
 
@@ -76,12 +79,10 @@ if (isset($pkwk_dtd)) {
  <title><?php echo $title ?> - <?php echo $page_title ?></title>
 
  <link rel="SHORTCUT ICON" href="<?php echo $image['favicon'] ?>" />
- <link rel="stylesheet" type="text/css" media="screen" href="skin/pukiwiki.css.php?charset=<?php echo $css_charset ?>" charset="<?php echo $css_charset ?>" />
- <link rel="stylesheet" type="text/css" media="print"  href="skin/pukiwiki.css.php?charset=<?php echo $css_charset ?>&amp;media=print" charset="<?php echo $css_charset ?>" />
+ <link rel="stylesheet" type="text/css" media="screen" href="<?php echo SKIN_DIR ?>pukiwiki.css.php?charset=<?php echo $css_charset ?>" charset="<?php echo $css_charset ?>" />
+ <link rel="stylesheet" type="text/css" media="print"  href="<?php echo SKIN_DIR ?>pukiwiki.css.php?charset=<?php echo $css_charset ?>&amp;media=print" charset="<?php echo $css_charset ?>" />
  <link rel="alternate" type="application/rss+xml" title="RSS" href="<?php echo $link['rss'] ?>" /><?php // RSS auto-discovery ?>
-	<link rel="stylesheet" type="text/css" href="<?php echo SKIN_DIR ?>ajaxtree/ajaxtree.css" />
-
-<?php if (PKWK_ALLOW_JAVASCRIPT && $trackback_javascript) { ?> <script type="text/javascript" src="skin/trackback.js"></script><?php } ?>
+ <link rel="stylesheet" type="text/css" href="<?php echo SKIN_DIR ?>ajaxtree/ajaxtree.css" />
 
 <?php echo $head_tag ?>
 </head>
@@ -153,33 +154,31 @@ function _navigator($key, $value = '', $javascript = ''){
  | <?php _navigator('search') ?>
  | <?php _navigator('recent') ?>
  | <?php _navigator('help')   ?>
+ <?php if ($enable_login) { ?>
+ | <?php _navigator('login') ?>
+ <?php } ?>
+ <?php if ($enable_logout) { ?>
+ | <?php _navigator('logout') ?>
+ <?php } ?>
  ]
-
-<?php if ($trackback) { ?> &nbsp;
- [ <?php _navigator('trackback', $lang['trackback'] . '(' . tb_count($_page) . ')',
- 	($trackback_javascript == 1) ? 'onclick="OpenTrackback(this.href); return false"' : '') ?> ]
-<?php } ?>
-<?php if ($referer)   { ?> &nbsp;
- [ <?php _navigator('refer') ?> ]
-<?php } ?>
 <?php } // PKWK_SKIN_SHOW_NAVBAR ?>
 </div>
 
 <?php echo $hr ?>
 
-<?php if (arg_check('read') && exist_plugin_convert('menu')) { ?>
+<?php if ($menu !== FALSE) { ?>
 <table border="0" style="width:100%">
  <tr>
   <td class="menubar">
-   <div id="menubar"><?php echo do_plugin_convert('menu') ?></div>
+   <div id="menubar"><?php echo $menu ?></div>
   </td>
   <td valign="top">
-   <div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
+  <div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
   </td>
  </tr>
 </table>
 <?php } else { ?>
-<div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
+	<div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
 <?php } ?>
 
 <?php if ($notes != '') { ?>
@@ -282,7 +281,7 @@ function _toolbar($key, $x = 20, $y = 20){
 <div id="footer">
  Site admin: <a href="<?php echo $modifierlink ?>"><?php echo $modifier ?></a><p />
  <?php echo S_COPYRIGHT ?>.
- Powered by PHP <?php echo PHP_VERSION ?>. HTML convert time: <?php echo $taketime ?> sec.
+ Powered by PHP <?php echo PHP_VERSION ?>. HTML convert time: <?php echo elapsedtime() ?> sec.
 </div>
 
 </body>

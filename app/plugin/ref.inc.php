@@ -40,7 +40,7 @@ define('PLUGIN_REF_DIRECT_ACCESS', FALSE); // FALSE or TRUE
 /////////////////////////////////////////////////
 
 // Image suffixes allowed
-define('PLUGIN_REF_IMAGE', '/\.(gif|png|jpe?g)$/i');
+define('PLUGIN_REF_IMAGE', '/\.(gif|png|jpe?g|swf)$/i');
 
 // Usage (a part of)
 define('PLUGIN_REF_USAGE', "([pagename/]attached-file-name[,parameters, ... ][,title])");
@@ -397,6 +397,10 @@ function plugin_ref_action()
 	if(! file_exists($ref))
 		return array('msg'=>'Attach file not found', 'body'=>$usage);
 
+	$is_image = preg_match(PLUGIN_REF_IMAGE, $filename);
+	if (!$is_image) {
+		return array('msg'=>'Seems not an image', 'body'=>$usage);
+	}
 	$got = @getimagesize($ref);
 	if (! isset($got[2])) $got[2] = FALSE;
 	switch ($got[2]) {
@@ -409,26 +413,23 @@ function plugin_ref_action()
 	}
 
 	// Care for Japanese-character-included file name
+	$legacy_filename = mb_convert_encoding($filename, 'UTF-8', SOURCE_ENCODING);
 	if (LANG == 'ja') {
 		switch(UA_NAME . '/' . UA_PROFILE){
-		case 'Opera/default':
-			// Care for using _auto-encode-detecting_ function
-			$filename = mb_convert_encoding($filename, 'UTF-8', 'auto');
-			break;
 		case 'MSIE/default':
-			$filename = mb_convert_encoding($filename, 'SJIS', 'auto');
+			$legacy_filename = mb_convert_encoding($filename, 'SJIS', SOURCE_ENCODING);
 			break;
 		}
 	}
-	$utf8filename = mb_convert_encoding($filename, 'UTF-8', 'auto');
+	$utf8filename = mb_convert_encoding($filename, 'UTF-8', SOURCE_ENCODING);
 	$size = filesize($ref);
 
 	// Output
 	pkwk_common_headers();
-	header('Content-Disposition: inline; filename="' . $filename . '"; filename*=utf-8\'\'' . rawurlencode($utf8filename));
+	header('Content-Disposition: inline; filename="' . $legacy_filename
+		.'"; filename*=utf-8\'\'' . rawurlencode($utf8filename));
 	header('Content-Length: ' . $size);
 	header('Content-Type: '   . $type);
 	@readfile($ref);
 	exit;
 }
-?>

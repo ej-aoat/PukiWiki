@@ -46,8 +46,9 @@ function plugin_popular_convert()
 	}
 
 	$counters = array();
+	$except_quote = str_replace('#', '\#', $except);
 	foreach (get_existpages(COUNTER_DIR, '.count') as $file=>$page) {
-		if (($except != '' && ereg($except, $page)) ||
+		if (($except != '' && preg_match("#$except_quote#", $page)) ||
 		    $page == $whatsnew || check_non_list($page) ||
 		    ! is_page($page))
 			continue;
@@ -81,7 +82,7 @@ function plugin_popular_convert()
 			$page = substr($page, 1);
 
 			$s_page = htmlsc($page);
-			if ($page == $vars['page']) {
+			if ($page === $vars['page']) {
 				// No need to link itself, notifies where you just read
 				$pg_passage = get_pg_passage($page,FALSE);
 				$items .= ' <li><span title="' . $s_page . ' ' . $pg_passage . '">' .
@@ -98,4 +99,4 @@ function plugin_popular_convert()
 
 	return sprintf($today ? $_popular_plugin_today_frame : $_popular_plugin_frame, count($counters), $items);
 }
-?>
+

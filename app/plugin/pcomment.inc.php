@@ -17,10 +17,8 @@
 //   reply -- Show radio buttons allow to specify where to reply
 
 // Default recording page name (%s = $vars['page'] = original page name)
-switch (LANG) {
-case 'ja': define('PLUGIN_PCOMMENT_PAGE', '[[コメント/%s]]'); break;
-default:   define('PLUGIN_PCOMMENT_PAGE', '[[Comments/%s]]'); break;
-}
+define('PLUGIN_PCOMMENT_PAGE', '[[Comments/%s]]');
+define('PLUGIN_PCOMMENT_PAGE_COMPATIBLE', '[[コメント/%s]]'); // for backword compatible of 'ja' pcomment
 
 define('PLUGIN_PCOMMENT_NUM_COMMENTS',     10); // Default 'latest N posts'
 define('PLUGIN_PCOMMENT_DIRECTION_DEFAULT', 1); // 1: above 0: below
@@ -58,7 +56,7 @@ function plugin_pcomment_action()
 	}
 
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . rawurlencode($refer));
+	header('Location: ' . get_script_uri() . '?' . pagename_urlencode($refer));
 	exit;
 }
 
@@ -80,8 +78,21 @@ function plugin_pcomment_convert()
 		plugin_pcomment_check_arg($arg, $params);
 
 	$vars_page = isset($vars['page']) ? $vars['page'] : '';
-	$page  = (isset($params['_args'][0]) && $params['_args'][0] != '') ? $params['_args'][0] :
-		sprintf(PLUGIN_PCOMMENT_PAGE, strip_bracket($vars_page));
+	if (isset($params['_args'][0]) && $params['_args'][0] != '') {
+		$page = $params['_args'][0];
+	} else {
+		$raw_vars_page = strip_bracket($vars_page);
+		$page = sprintf(PLUGIN_PCOMMENT_PAGE, $raw_vars_page);
+		$raw_page = strip_bracket($page);
+		if (!is_page($raw_page)) {
+			// If the page doesn't exist, search backward-compatible page
+			// If only compatible page exists, set the page as comment target
+			$page_compat = sprintf(PLUGIN_PCOMMENT_PAGE_COMPATIBLE, $raw_vars_page);
+			if (is_page(strip_bracket($page_compat))) {
+				$page = $page_compat;
+			}
+		}
+	}
 	$count = isset($params['_args'][1]) ? intval($params['_args'][1]) : 0;
 	if ($count == 0) $count = PLUGIN_PCOMMENT_NUM_COMMENTS;
 
@@ -209,7 +220,7 @@ function plugin_pcomment_insert()
 		$count    = count($postdata);
 
 		$digest = isset($vars['digest']) ? $vars['digest'] : '';
-		if (md5(join('', $postdata)) != $digest) {
+		if (md5(join('', $postdata)) !== $digest) {
 			$ret['msg']  = $_pcmt_messages['title_collided'];
 			$ret['body'] = $_pcmt_messages['msg_collided'];
 		}
@@ -230,7 +241,7 @@ function plugin_pcomment_insert()
 			while ($end_position < $count) {
 				$matches = array();
 				if (preg_match('/^(\-{1,2})(?!\-)(.*)$/', $postdata[$end_position++], $matches)
-					&& md5($matches[2]) == $reply_hash)
+					&& md5($matches[2]) === $reply_hash)
 				{
 					$b_reply = TRUE;
 					$level   = strlen($matches[1]) + 1;
@@ -368,4 +379,4 @@ function plugin_pcomment_get_comments($page, $count, $dir, $reply)
 
 	return array($comments, $digest);
 }
-?>
+

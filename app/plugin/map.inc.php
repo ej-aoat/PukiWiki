@@ -46,14 +46,14 @@ function plugin_map_action()
 	// Generate a tree
 	$nodes = array();
 	foreach ($pages as $page)
-		$nodes[$page] = & new MapNode($page, $reverse);
+		$nodes[$page] = new MapNode($page, $reverse);
 
 	// Node not found: Because of filtererd by $non_list
 	if (! isset($nodes[$refer])) $vars['refer'] = $refer = $defaultpage;
 
 	if ($reverse) {
 		$keys = array_keys($nodes);
-		sort($keys);
+		sort($keys, SORT_STRING);
 		$alone = array();
 		$retval['body'] .= '<ul>' . "\n";
 		foreach ($keys as $page) {
@@ -78,7 +78,7 @@ function plugin_map_action()
 		$retval['body'] .= '<hr />' . "\n" .
 			'<p>Not related from ' . htmlsc($refer) . '</p>' . "\n";
 		$keys = array_keys($nodes);
-		sort($keys);
+		sort($keys, SORT_STRING);
 		$retval['body'] .= '<ul>' . "\n";
 		foreach ($keys as $page) {
 			if (! $nodes[$page]->done) {
@@ -142,7 +142,7 @@ class MapNode
 				$refs[] = $ref[0];
 			}
 			$this->hide($refs);
-			sort($refs);
+			sort($refs, SORT_STRING);
 		}
 		return $refs;
 	}
@@ -155,7 +155,7 @@ class MapNode
 			$data = file($file);
 			$rels = explode("\t", trim($data[0]));
 			$this->hide($rels);
-			sort($rels);
+			sort($rels, SORT_STRING);
 		}
 		return $rels;
 	}
@@ -168,7 +168,7 @@ class MapNode
 		if ($this->parent_id == 0) $this->parent_id = -1;
 
 		foreach ($this->rels as $page) {
-			if (! isset($nodes[$page])) $nodes[$page] = & new MapNode($page);
+			if (! isset($nodes[$page])) $nodes[$page] = new MapNode($page);
 			if ($nodes[$page]->parent_id == 0)
 				$nodes[$page]->parent_id = $this->id;
 		}
@@ -203,4 +203,4 @@ class MapNode
 		return $retval;
 	}
 }
-?>
+

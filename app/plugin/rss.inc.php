@@ -1,6 +1,6 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: rss.inc.php,v 1.18 2006/03/05 15:01:31 henoheno Exp $
+// $Id: rss.inc.php,v 1.21 2007/02/11 05:53:31 henoheno Exp $
 //
 // RSS plugin: Publishing RSS of RecentChanges
 //
@@ -13,7 +13,7 @@
 
 function plugin_rss_action()
 {
-	global $vars, $rss_max, $page_title, $whatsnew, $trackback;
+	global $vars, $rss_max, $page_title, $whatsnew;
 
 	$version = isset($vars['ver']) ? $vars['ver'] : '';
 	switch($version){
@@ -38,7 +38,7 @@ function plugin_rss_action()
 
 	foreach (file_head($recent, $rss_max) as $line) {
 		list($time, $page) = explode("\t", rtrim($line));
-		$r_page = rawurlencode($page);
+		$r_page = pagename_urlencode($page);
 		$title  = mb_convert_encoding($page, 'UTF-8', SOURCE_ENCODING);
 
 		switch ($version) {
@@ -64,19 +64,12 @@ EOD;
 				'?' . $r_page . '" />' . "\n";
 
 			$date = substr_replace(get_date('Y-m-d\TH:i:sO', $time), ':', -2, 0);
-			$trackback_ping = '';
-			if ($trackback) {
-				$tb_id = md5($r_page);
-				$trackback_ping = ' <trackback:ping>' . $self .
-					'?tb_id=' . $tb_id . '</trackback:ping>';
-			}
 			$items .= <<<EOD
 <item rdf:about="$self?$r_page">
  <title>$title</title>
  <link>$self?$r_page</link>
  <dc:date>$date</dc:date>
  <dc:identifier>$self?$r_page</dc:identifier>
-$trackback_ping
 </item>
 
 EOD;
@@ -89,7 +82,7 @@ EOD;
 	header('Content-type: application/xml');
 	print '<?xml version="1.0" encoding="UTF-8"?>' . "\n\n";
 
-	$r_whatsnew = rawurlencode($whatsnew);
+	$r_whatsnew = pagename_urlencode($whatsnew);
 	switch ($version) {
 	case '0.91':
 		print '<!DOCTYPE rss PUBLIC "-//Netscape Communications//DTD RSS 0.91//EN"' .
@@ -112,12 +105,9 @@ EOD;
 		break;
 
 	case '1.0':
-		$xmlns_trackback = $trackback ?
-			'  xmlns:trackback="http://madskills.com/public/xml/rss/module/trackback/"' : '';
 		print <<<EOD
 <rdf:RDF
   xmlns:dc="http://purl.org/dc/elements/1.1/"
-$xmlns_trackback
   xmlns="http://purl.org/rss/1.0/"
   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
   xml:lang="$lang">
@@ -139,4 +129,4 @@ EOD;
 	}
 	exit;
 }
-?>
+

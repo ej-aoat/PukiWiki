@@ -31,7 +31,7 @@
 
     HTMLへのコンバート時に呼び出される
 
-    引数は func_get_args() で配列へ格納できる。([0]〜[n])
+    引数は func_get_args() で配列へ格納できる。([0]～[n])
     func_num_args() によって、渡された引数の数を求めることができる。
 
   ■function plugin_プラグイン名_action()

@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: html.php,v 1.66 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+// html.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -14,9 +14,9 @@ function catbody($title, $page, $body)
 	global $script, $vars, $arg, $defaultpage, $whatsnew, $help_page, $hr;
 	global $attach_link, $related_link, $cantedit, $function_freeze;
 	global $search_word_color, $_msg_word, $foot_explain, $note_hr, $head_tags;
-	global $trackback, $trackback_javascript, $referer, $javascript;
-	global $nofollow;
+	global $javascript, $nofollow;
 	global $_LANG, $_LINK, $_IMAGE;
+	global $auth_type, $auth_user;
 
 	global $pkwk_dtd;     // XHTML 1.1, XHTML1.0, HTML 4.01 Transitional...
 	global $page_title;   // Title of this site
@@ -24,17 +24,35 @@ function catbody($title, $page, $body)
 	global $modifier;     // Site administrator's  web page
 	global $modifierlink; // Site administrator's name
 
+	$enable_login = false;
+	$enable_logout = false;
+	if (AUTH_TYPE_FORM === $auth_type || AUTH_TYPE_EXTERNAL === $auth_type) {
+		if ($auth_user) {
+			$enable_logout = true;
+		} else {
+			$enable_login = true;
+		}
+	} else if (AUTH_TYPE_BASIC === $auth_type) {
+		if ($auth_user) {
+			$enable_logout = true;
+		}
+	}
 	if (! file_exists(SKIN_FILE) || ! is_readable(SKIN_FILE))
 		die_message('SKIN_FILE is not found');
 
 	$_LINK = $_IMAGE = array();
 
 	// Add JavaScript header when ...
-	if ($trackback && $trackback_javascript) $javascript = 1; // Set something If you want
 	if (! PKWK_ALLOW_JAVASCRIPT) unset($javascript);
 
 	$_page  = isset($vars['page']) ? $vars['page'] : '';
-	$r_page = rawurlencode($_page);
+	$r_page = pagename_urlencode($_page);
+
+	// Canonical URL
+	$canonical_url = $script;
+	if ($_page !== $defaultpage) {
+		$canonical_url = $script . '?' . $r_page;
+	}
 
 	// Set $_LINK for skin
 	$_LINK['add']      = "$script?cmd=add&amp;page=$r_page";
@@ -44,25 +62,31 @@ function catbody($title, $page, $body)
 	$_LINK['edit']     = "$script?cmd=edit&amp;page=$r_page";
 	$_LINK['filelist'] = "$script?cmd=filelist";
 	$_LINK['freeze']   = "$script?cmd=freeze&amp;page=$r_page";
-	$_LINK['help']     = "$script?" . rawurlencode($help_page);
+	$_LINK['help']     = "$script?" . pagename_urlencode($help_page);
 	$_LINK['list']     = "$script?cmd=list";
 	$_LINK['new']      = "$script?plugin=newpage&amp;refer=$r_page";
 	$_LINK['rdf']      = "$script?cmd=rss&amp;ver=1.0";
-	$_LINK['recent']   = "$script?" . rawurlencode($whatsnew);
-	$_LINK['refer']    = "$script?plugin=referer&amp;page=$r_page";
-	$_LINK['reload']   = "$script?$r_page";
+	$_LINK['recent']   = "$script?" . pagename_urlencode($whatsnew);
+	$_LINK['reload']   = $canonical_url;
 	$_LINK['rename']   = "$script?plugin=rename&amp;refer=$r_page";
 	$_LINK['rss']      = "$script?cmd=rss";
 	$_LINK['rss10']    = "$script?cmd=rss&amp;ver=1.0"; // Same as 'rdf'
 	$_LINK['rss20']    = "$script?cmd=rss&amp;ver=2.0";
 	$_LINK['search']   = "$script?cmd=search";
-	$_LINK['top']      = "$script?" . rawurlencode($defaultpage);
-	if ($trackback) {
-		$tb_id = tb_get_id($_page);
-		$_LINK['trackback'] = "$script?plugin=tb&amp;__mode=view&amp;tb_id=$tb_id";
-	}
+	$_LINK['top']      = "$script?" . pagename_urlencode($defaultpage);
 	$_LINK['unfreeze'] = "$script?cmd=unfreeze&amp;page=$r_page";
 	$_LINK['upload']   = "$script?plugin=attach&amp;pcmd=upload&amp;page=$r_page";
+	$login_link = "#LOGIN_ERROR"; // dummy link that is not used
+	switch ($auth_type) {
+		case AUTH_TYPE_FORM:
+			$login_link = "$script?plugin=loginform&pcmd=login&page=$r_page";
+			break;
+		case AUTH_TYPE_EXTERNAL:
+			$login_link = get_auth_external_login_url($_page, $_LINK['reload']);
+			break;
+	}
+	$_LINK['login']    = htmlsc($login_link);
+	$_LINK['logout']   = "$script?plugin=loginform&amp;pcmd=logout&amp;page=$r_page";
 
 	// Compat: Skins for 1.4.4 and before
 	$link_add       = & $_LINK['add'];
@@ -76,7 +100,7 @@ function catbody($title, $page, $body)
 	$link_whatsnew  = & $_LINK['recent'];
 	$link_backup    = & $_LINK['backup'];
 	$link_help      = & $_LINK['help'];
-	$link_trackback = & $_LINK['trackback'];	// New!
+	$link_trackback = ''; // Removed (compat)
 	$link_rdf       = & $_LINK['rdf'];		// New!
 	$link_rss       = & $_LINK['rss'];
 	$link_rss10     = & $_LINK['rss10'];		// New!
@@ -85,7 +109,7 @@ function catbody($title, $page, $body)
 	$link_unfreeze  = & $_LINK['unfreeze'];
 	$link_upload    = & $_LINK['upload'];
 	$link_template  = & $_LINK['copy'];
-	$link_refer     = & $_LINK['refer'];	// New!
+	$link_refer     = ''; // Removed (compat)
 	$link_rename    = & $_LINK['rename'];
 
 	// Init flags
@@ -114,6 +138,18 @@ function catbody($title, $page, $body)
 	// 1.3.x compat
 	// Last modification date (UNIX timestamp) of the page
 	$fmt = $is_read ? get_filetime($_page) + LOCALZONE : 0;
+
+	// Output nofollow / noindex regardless os skin file
+	if (!$is_read || $nofollow) {
+		if (!headers_sent()) {
+			header("X-Robots-Tag: noindex,nofollow");
+		}
+	}
+
+	// Send Canonical URL for Search Engine Optimization
+	if ($is_read && !headers_sent()) {
+		header("Link: <$canonical_url>; rel=\"canonical\"");
+	}
 
 	// Search words
 	if ($search_word_color && isset($vars['word'])) {
@@ -153,8 +189,8 @@ function catbody($title, $page, $body)
 		}
 	}
 
-	$longtaketime = getmicrotime() - MUTIME;
-	$taketime     = sprintf('%01.03f', $longtaketime);
+	// Compat: 'HTML convert time' without time about MenuBar and skin
+	$taketime = elapsedtime();
 
 	require(SKIN_FILE);
 }
@@ -166,6 +202,7 @@ function edit_form($page, $postdata, $digest = FALSE, $b_template = TRUE)
 	global $_btn_preview, $_btn_repreview, $_btn_update, $_btn_cancel, $_msg_help;
 	global $whatsnew, $_btn_template, $_btn_load, $load_template_func;
 	global $notimeupdate;
+	global $_title_list, $_label_template_pages;
 
 	// Newly generate $digest or not
 	if ($digest === FALSE) $digest = md5(join('', get_source($page)));
@@ -186,20 +223,54 @@ function edit_form($page, $postdata, $digest = FALSE, $b_template = TRUE)
 	}
 
 	if($load_template_func && $b_template) {
-		$pages  = array();
+		$tpage_names = array(); // Pages marked as template
+		$template_page = ':config/Templates';
+		$page_max = 100;
+		foreach(get_source($template_page) as $_templates) {
+			$m = array();
+			if (! preg_match('#\-\s*\[\[([^\[\]]+)\]\]#', $_templates, $m)) continue;
+			$tpage = preg_replace('#^./#', "$template_page/", $m[1]);
+			if (! is_page($tpage)) continue;
+			$tpage_names[] = $tpage;
+		}
+		$page_names = array();
 		foreach(get_existpages() as $_page) {
 			if ($_page == $whatsnew || check_non_list($_page))
 				continue;
-			$s_page = htmlsc($_page);
-			$pages[$_page] = '   <option value="' . $s_page . '">' .
-				$s_page . '</option>';
+			if (preg_match('/template/i', $_page)) {
+				$tpage_names[] = $_page;
+			} else {
+				if (count($page_names) >= $page_max) continue;
+				$page_names[] = $_page;
+			}
 		}
-		ksort($pages);
-		$s_pages  = join("\n", $pages);
+		$tpage_names2 = array_values(array_unique($tpage_names));
+		natcasesort($tpage_names2);
+		natcasesort($page_names);
+		$tpages = array(); // Template pages
+		$npages = array(); // Normal pages
+		foreach($tpage_names2 as $p) {
+			$ps = htmlsc($p);
+			$tpages[] = '   <option value="' . $ps . '">' . $ps . '</option>';
+		}
+		foreach($page_names as $p) {
+			$ps = htmlsc($p);
+			$npages[] = '   <option value="' . $ps . '">' . $ps . '</option>';
+		}
+		if (count($page_names) === $page_max) {
+			$npages[] = '   <option value="">...</option>';
+		}
+		$s_tpages  = join("\n", $tpages);
+		$s_npages  = join("\n", $npages);
 		$template = <<<EOD
   <select name="template_page">
    <option value="">-- $_btn_template --</option>
-$s_pages
+   <optgroup label="$_label_template_pages">
+$s_tpages
+   </optgroup>
+   <optgroup label="$_title_list">
+$s_npages
+   </optgroup>
   </select>
   <input type="submit" name="template" value="$_btn_load" accesskey="r" />
   <br />
@@ -283,16 +354,16 @@ function make_related($page, $tag = '')
 	$links = links_get_related($page);
 
 	if ($tag) {
-		ksort($links);
+		ksort($links, SORT_STRING);		// Page name, alphabetical order
 	} else {
-		arsort($links);
+		arsort($links, SORT_NUMERIC);	// Last modified date, newer
 	}
 
 	$_links = array();
 	foreach ($links as $page=>$lastmod) {
 		if (check_non_list($page)) continue;
 
-		$r_page   = rawurlencode($page);
+		$r_page   = pagename_urlencode($page);
 		$s_page   = htmlsc($page);
 		$passage  = get_passage($lastmod);
 		$_links[] = $tag ?
@@ -382,11 +453,11 @@ function make_heading(& $str, $strip = TRUE)
 	// Cut fixed-heading anchors
 	$id = '';
 	$matches = array();
-	if (preg_match('/^(\*{0,5})(.*?)\[#([A-Za-z][\w-]+)\](.*?)$/m', $str, $matches)) {
+	if (preg_match('/^(\*{0,3})(.*?)\[#([A-Za-z][\w-]+)\](.*?)$/m', $str, $matches)) {
 		$str = $matches[2] . $matches[4];
 		$id  = & $matches[3];
 	} else {
-		$str = preg_replace('/^\*{0,5}/', '', $str);
+		$str = preg_replace('/^\*{0,3}/', '', $str);
 	}
 
 	// Cut footnotes and tags
@@ -542,4 +613,3 @@ function pkwk_output_dtd($pkwk_dtd = PKWK_DTD_XHTML_1_1, $charset = CONTENT_CHAR
 		return '<meta http-equiv="content-type" content="text/html; charset=' . $charset . '" />' . "\n";
 	}
 }
-?>

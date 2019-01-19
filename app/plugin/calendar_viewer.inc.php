@@ -149,9 +149,9 @@ function plugin_calendar_viewer_convert()
 	closedir($dir);
 
 	if ($mode == 'past') {
-		rsort($pagelist);	// New => Old
+		rsort($pagelist, SORT_STRING);	// New => Old
 	} else {
-		sort($pagelist);	// Old => New
+		sort($pagelist, SORT_STRING);	// Old => New
 	}
 
 	// Include start
@@ -173,7 +173,7 @@ function plugin_calendar_viewer_convert()
 			$body = str_replace('$1', $page, $_msg_calendar_viewer_restrict);
 		}
 
-		$r_page = rawurlencode($page);
+		$r_page = pagename_urlencode($page);
 
 		if (PLUGIN_CALENDAR_VIEWER_DATE_FORMAT !== FALSE) {
 			$time = strtotime(basename($page)); // $date_sep must be assumed '-' or ''!
@@ -324,10 +324,10 @@ function plugin_calendar_viewer_isValidDate($aStr, $aSepList = '-/ .')
 	if ($aSepList == '') {
 		// yyymmddとしてチェック（手抜き(^^;）
 		return checkdate(substr($aStr, 4, 2), substr($aStr, 6, 2), substr($aStr, 0, 4));
-	} else if (ereg("^([0-9]{2,4})[$aSepList]([0-9]{1,2})[$aSepList]([0-9]{1,2})$", $aStr, $matches) ) {
+	} else if (preg_match("#^([0-9]{2,4})[$aSepList]([0-9]{1,2})[$aSepList]([0-9]{1,2})$#", $aStr, $matches) ) {
 		return checkdate($matches[2], $matches[3], $matches[1]);
 	} else {
 		return FALSE;
 	}
 }
-?>
+

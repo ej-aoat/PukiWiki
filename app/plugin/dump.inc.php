@@ -1,5 +1,9 @@
 <?php
-// $Id: dump.inc.php,v 1.37 2006/01/12 01:01:35 teanan Exp $
+// $Id: dump.inc.php,v 1.41 2007/11/03 15:17:52 henoheno Exp $
+// Copyright (C)
+//   2004-2007 PukiWiki Developers Team
+//   2004      teanan / Interfair Laboratory
+// License: GPL v2 or (at your option) any later version
 //
 // Remote dump / restore plugin
 // Originated as tarfile.inc.php by teanan / Interfair Laboratory 2004.
@@ -225,9 +229,9 @@ function plugin_dump_disp_form()
 <p><strong>アーカイブの形式</strong>
 <br />
   <input type="radio" name="pcmd" id="_p_dump_tgz" value="tgz" checked="checked" />
-  <label for="_p_dump_tgz"> 〜.tar.gz 形式</label><br />
+  <label for="_p_dump_tgz"> ～.tar.gz 形式</label><br />
   <input type="radio" name="pcmd" id="_p_dump_tar" value="tar" />
-  <label for="_p_dump_tar">〜.tar 形式</label>
+  <label for="_p_dump_tar">～.tar 形式</label>
 </p>
 <p><strong>バックアップディレクトリ</strong>
 <br />
@@ -386,14 +390,14 @@ class tarlib
 			@unlink($this->filename);
 			die_message($dir . ' is not found or not readable.');
 		}
-
-		while ($filename = readdir($dp)) {
-			if (preg_match("/$mask/", $filename))
+		while (($filename = readdir($dp)) !== FALSE) {
+			if (preg_match('/' . $mask . '/', $filename)) {
 				$files[] = $dir . $filename;
+			}
 		}
 		closedir($dp);
 		
-		sort($files);
+		sort($files, SORT_STRING);
 
 		$matches = array();
 		foreach($files as $name)

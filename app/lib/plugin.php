@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: plugin.php,v 1.20 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2002-2005 PukiWiki Developers Team
+// plugin.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -67,22 +67,18 @@ function exist_plugin_inline($name) {
 		function_exists('plugin_' . $name . '_inline') : FALSE;
 }
 
-// Do init the plugin
+// Call 'init' function for the plugin
+// NOTE: Returning FALSE means "An erorr occurerd"
 function do_plugin_init($name)
 {
-	static $checked = array();
+	static $done = array();
 
-	if (isset($checked[$name])) return $checked[$name];
-
-	$func = 'plugin_' . $name . '_init';
-	if (function_exists($func)) {
-		// TRUE or FALSE or NULL (return nothing)
-		$checked[$name] = call_user_func($func);
-	} else {
-		$checked[$name] = NULL; // Not exist
+	if (! isset($done[$name])) {
+		$func = 'plugin_' . $name . '_init';
+		$done[$name] = (! function_exists($func) || call_user_func($func) !== FALSE);
 	}
 
-	return $checked[$name];
+	return $done[$name];
 }
 
 // Call API 'action' of the plugin
@@ -90,8 +86,9 @@ function do_plugin_action($name)
 {
 	if (! exist_plugin_action($name)) return array();
 
-	if(do_plugin_init($name) === FALSE)
-		die_message('Plugin init failed: ' . $name);
+	if (do_plugin_init($name) === FALSE) {
+		die_message('Plugin init failed: ' . htmlsc($name));
+	}
 
 	$retvar = call_user_func('plugin_' . $name . '_action');
 
@@ -109,8 +106,9 @@ function do_plugin_convert($name, $args = '')
 {
 	global $digest;
 
-	if(do_plugin_init($name) === FALSE)
-		return '[Plugin init failed: ' . $name . ']';
+	if (do_plugin_init($name) === FALSE) {
+		return '[Plugin init failed: ' . htmlsc($name) . ']';
+	}
 
 	if (! PKWKEXP_DISABLE_MULTILINE_PLUGIN_HACK) {
 		// Multiline plugin?
@@ -152,13 +150,14 @@ function do_plugin_inline($name, $args, & $body)
 {
 	global $digest;
 
-	if(do_plugin_init($name) === FALSE)
-		return '[Plugin init failed: ' . $name . ']';
+	if (do_plugin_init($name) === FALSE) {
+		return '[Plugin init failed: ' . htmlsc($name) . ']';
+	}
 
-	if ($args !== '') {
-		$aryargs = csv_explode(',', $args);
-	} else {
+	if ($args === '') {
 		$aryargs = array();
+	} else {
+		$aryargs = csv_explode(',', $args);
 	}
 
 	// NOTE: A reference of $body is always the last argument
@@ -175,4 +174,3 @@ function do_plugin_inline($name, $args, & $body)
 		return $retvar;
 	}
 }
-?>

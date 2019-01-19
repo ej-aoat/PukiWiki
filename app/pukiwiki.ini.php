@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: pukiwiki.ini.php,v 1.140 2006/06/11 14:35:39 henoheno Exp $
-// Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+// pukiwiki.ini.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -69,14 +69,13 @@ define('UI_LANG', LANG); // 'en' for Internationalized wikisite
 
 // You may hide these directories (from web browsers)
 // by setting DATA_HOME at index.php.
-define('RUN_HOME',      DATA_HOME . '../data/'     ); // Latest wiki texts
-define('DATA_DIR',      RUN_HOME . 'wiki/'     ); // Latest wiki texts
-define('DIFF_DIR',      RUN_HOME . 'diff/'     ); // Latest diffs
-define('BACKUP_DIR',    RUN_HOME . 'backup/'   ); // Backups
-define('CACHE_DIR',     RUN_HOME . 'cache/'    ); // Some sort of caches
-define('UPLOAD_DIR',    RUN_HOME . 'attach/'   ); // Attached files and logs
-define('COUNTER_DIR',   RUN_HOME . 'counter/'  ); // Counter plugin's counts
-define('TRACKBACK_DIR', RUN_HOME . 'trackback/'); // TrackBack logs
+
+define('DATA_DIR',      DATA_HOME . 'wiki/'     ); // Latest wiki texts
+define('DIFF_DIR',      DATA_HOME . 'diff/'     ); // Latest diffs
+define('BACKUP_DIR',    DATA_HOME . 'backup/'   ); // Backups
+define('CACHE_DIR',     DATA_HOME . 'cache/'    ); // Some sort of caches
+define('UPLOAD_DIR',    DATA_HOME . 'attach/'   ); // Attached files and logs
+define('COUNTER_DIR',   DATA_HOME . 'counter/'  ); // Counter plugin's counts
 define('PLUGIN_DIR',    DATA_HOME . 'plugin/'   ); // Plugin directory
 
 /////////////////////////////////////////////////
@@ -155,21 +154,8 @@ $nofollow = 0; // 1 = Try hiding from search engines
 define('PKWK_ALLOW_JAVASCRIPT', 0);
 
 /////////////////////////////////////////////////
-// TrackBack feature
-
-// Enable Trackback
-$trackback = 0;
-
-// Show trackbacks with an another window (using JavaScript)
-$trackback_javascript = 0;
-
-/////////////////////////////////////////////////
-// Referer list feature
-$referer = 0;
-
-/////////////////////////////////////////////////
 // _Disable_ WikiName auto-linking
-$nowikiname = 1;
+$nowikiname = 0;
 
 /////////////////////////////////////////////////
 // AutoLink feature
@@ -190,7 +176,7 @@ $notimeupdate = 1;
 // Admin password for this Wikisite
 
 // Default: always fail
-$adminpass = '{x-php-md5}' . md5('pass');
+$adminpass = '{x-php-md5}!';
 
 // Sample:
 //$adminpass = 'pass'; // Cleartext
@@ -229,6 +215,28 @@ $pagereading_config_page = ':config/PageReading';
 // Page name of default pronouncing dictionary, used when converter = 'none'
 $pagereading_config_dict = ':config/PageReading/dict';
 
+
+/////////////////////////////////////////////////
+// Authentication type
+// AUTH_TYPE_NONE, AUTH_TYPE_FORM, AUTH_TYPE_BASIC, AUTH_TYPE_EXTERNAL, ...
+// $auth_type = AUTH_TYPE_FORM;
+// $auth_external_login_url_base = './exlogin.php';
+
+/////////////////////////////////////////////////
+// LDAP
+$ldap_user_account = 0; // (0: Disabled, 1: Enabled)
+// $ldap_server = 'ldap://ldapserver:389';
+// $ldap_base_dn = 'ou=Users,dc=ldap,dc=example,dc=com';
+// $ldap_bind_dn = 'uid=$login,dc=example,dc=com';
+// $ldap_bind_password = '';
+
+/////////////////////////////////////////////////
+// User prefix that shows its auth provider
+$auth_provider_user_prefix_default = 'default:';
+$auth_provider_user_prefix_ldap = 'ldap:';
+$auth_provider_user_prefix_external = 'external:';
+
+
 /////////////////////////////////////////////////
 // User definition
 $auth_users = array(
@@ -236,6 +244,13 @@ $auth_users = array(
 	'foo'	=> 'foo_passwd', // Cleartext
 	'bar'	=> '{x-php-md5}f53ae779077e987718cc285b14dfbe86', // PHP md5() 'bar_passwd'
 	'hoge'	=> '{SMD5}OzJo/boHwM4q5R+g7LCOx2xGMkFKRVEx',      // LDAP SMD5 'hoge_passwd'
+);
+
+// Group definition
+$auth_groups = array(
+	// Groupname => group members(users)
+	'valid-user' => '', // Reserved 'valid-user' group contains all authenticated users
+	'groupfoobar'	=> 'foo,bar',
 );
 
 /////////////////////////////////////////////////
@@ -249,7 +264,8 @@ $auth_method_type	= 'pagename';	// By Page name
 $read_auth = 0;
 
 $read_auth_pages = array(
-	// Regex		   Username
+	// Regex		   Groupname or Username
+	'#PageForAllValidUsers#'	=> 'valid-user',
 	'#HogeHoge#'		=> 'hoge',
 	'#(NETABARE|NetaBare)#'	=> 'foo,bar,hoge',
 );
@@ -331,7 +347,7 @@ define('PKWK_UPDATE_EXEC', '');
 //	' -O ' . $output_dir . ' -L ja -c -K ' . $target);
 
 /////////////////////////////////////////////////
-// HTTP proxy setting (for TrackBack etc)
+// HTTP proxy setting
 
 // Use HTTP proxy server to get remote data
 $use_proxy = 0;
@@ -530,4 +546,3 @@ $agents = array(
 
 	array('pattern'=>'#^#',	'profile'=>'default'),	// Sentinel
 );
-?>

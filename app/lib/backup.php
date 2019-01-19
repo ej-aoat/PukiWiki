@@ -11,9 +11,8 @@
  * @access  public
  * @author
  * @create
- * @version $Id: backup.php,v 1.13 2011/01/25 15:01:01 henoheno Exp $
  * Copyright (C)
- *   2002-2006 PukiWiki Developers Team
+ *   2002-2016 PukiWiki Development Team
  *   2001-2002 Originally written by yu-ji
  * License: GPL v2 or (at your option) any later version
  **/
@@ -29,14 +28,15 @@
  * @return    Void
  */
 
-function make_backup($page, $delete = FALSE)
+function make_backup($page, $is_delete, $wikitext)
 {
 	global $cycle, $maxage;
 	global $do_backup, $del_backup;
+	global $auth_user;
 
 	if (PKWK_READONLY || ! $do_backup) return;
 
-	if ($del_backup && $delete) {
+	if ($del_backup && $is_delete) {
 		_backup_delete($page);
 		return;
 	}
@@ -44,11 +44,25 @@ function make_backup($page, $delete = FALSE)
 	if (! is_page($page)) return;
 
 	$lastmod = _backup_get_filetime($page);
-	if ($lastmod == 0 || UTIME - $lastmod > 60 * 60 * $cycle)
+	$backups = get_backup($page);
+	$is_author_differ = false;
+	$need_backup_by_time = $lastmod == 0 || UTIME - $lastmod > 60 * 60 * $cycle;
+	if (!$need_backup_by_time) {
+		// Backup file is saved recently, but the author may differ.
+		$last_content = get_source($page, TRUE, TRUE);
+		$m = array();
+		$prev_author = null;
+		if (preg_match('/^#author\("([^"]+)","([^"]*)","([^"]*)"\)/m', $last_content, $m)) {
+			$prev_author = preg_replace('/^[^:]+:/', '', $m[2]);
+		}
+		if ($prev_author !== $auth_user) {
+			$is_author_differ = true;
+		}
+	}
+	if ($need_backup_by_time || $is_author_differ || $is_delete)
 	{
 		$backups = get_backup($page);
 		$count   = count($backups) + 1;
-
 		// 直後に1件追加するので、(最大件数 - 1)を超える要素を捨てる
 		if ($count > $maxage)
 			array_splice($backups, 0, $count - $maxage);
@@ -65,12 +79,17 @@ function make_backup($page, $delete = FALSE)
 		$body = preg_replace('/^(' . preg_quote(PKWK_SPLITTER) . "\s\d+)$/", '$1 ', get_source($page));
 		$body = PKWK_SPLITTER . ' ' . get_filetime($page) . "\n" . join('', $body);
 		$body = preg_replace("/\n*$/", "\n", $body);
-
+		$body_on_delete = '';
+		if ($is_delete) {
+			$body_on_delete = PKWK_SPLITTER . ' ' . UTIME . "\n" . $wikitext;
+			$body_on_delete = preg_replace("/\n*$/", "\n", $body_on_delete);
+		}
 		$fp = _backup_fopen($page, 'wb')
 			or die_message('Cannot open ' . htmlsc(_backup_get_filename($page)) .
 			'<br />Maybe permission is not writable or filename is too long');
 		_backup_fputs($fp, $strout);
 		_backup_fputs($fp, $body);
+		_backup_fputs($fp, $body_on_delete);
 		_backup_fclose($fp);
 	}
 }
@@ -105,6 +124,11 @@ function get_backup($page, $age = 0)
 
 			// Allocate
 			$retvars[$_age] = array('time'=>$match[1], 'data'=>array());
+		} else if (preg_match('/^\s*#author\("([^"]+)","([^"]+)","([^"]*)"\)/', $line, $match)) {
+			$retvars[$_age]['author_datetime'] = $match[1];
+			$retvars[$_age]['author'] = $match[2];
+			$retvars[$_age]['author_fullname'] = $match[3];
+			$retvars[$_age]['data'][] = $line;
 		} else {
 			// The first ... the last line of the data
 			$retvars[$_age]['data'][] = $line;
@@ -306,4 +330,3 @@ else
 			array();
 	}
 }
-?>

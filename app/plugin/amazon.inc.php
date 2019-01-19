@@ -1,18 +1,17 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: amazon.inc.php,v 1.16 2011/01/25 15:01:01 henoheno Exp $
-// Id: amazon.inc.php,v 1.1 2003/07/24 13:00:00 閑舎
+// amazon.inc.php
 //
 // Amazon plugin: Book-review maker via amazon.com/amazon.jp
 //
 // Copyright:
-//	2004-2005 PukiWiki Developers Team
+//	2004-2016 PukiWiki Development Team
 //	2003 閑舎 <raku@rakunet.org> (Original author)
 //
 // License: GNU/GPL
 //
 // ChangeLog:
-// * 2004/04/03 PukiWiki Developer Team (arino <arino@users.sourceforge.jp>)
+// * 2004/04/03 PukiWiki Developer Team (arino <arino@users.osdn.me>)
 //        - replace plugin_amazon_get_page().
 //        - PLUGIN_AMAZON_XML 'xml.amazon.com' -> 'xml.amazon.co.jp'
 // * 0.6  URL が存在しない場合、No image を表示、画像配置など修正。
@@ -217,7 +216,7 @@ function plugin_amazon_action()
 			$title = plugin_amazon_get_asin_title();
 			if ($title == '' || preg_match('#^/#', $s_page)) {
 				// Invalid page name
-				header('Location: ' . get_script_uri() . '?' . rawurlencode($s_page));
+				header('Location: ' . get_script_uri() . '?' . pagename_urlencode($s_page));
 			} else {
 				$body = '#amazon(' . $asin_all . ',,image)' . "\n" .
 					'*' . $title . "\n" . $amazon_body;
@@ -441,7 +440,7 @@ function plugin_amazon_review_save($page, $data)
 
 function plugin_amazon_get_page($url)
 {
-	$data = http_request($url);
+	$data = pkwk_http_request($url);
 	return ($data['rc'] == 200) ? $data['data'] : '';
 }
 
@@ -461,4 +460,3 @@ function is_asin()
 		return TRUE;
 	}
 }
-?>

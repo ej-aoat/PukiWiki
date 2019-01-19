@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: tdiary.skin.php,v 1.37 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+// tdiary.skin.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -58,7 +58,7 @@ if (! defined('TDIARY_THEME') || TDIARY_THEME == '') {
 		echo 'tDiary theme wrapper: ';
 		echo 'Theme not found: ' . htmlsc($theme_css) . '<br />';
 		echo 'You can get tdiary-theme from: ';
-		echo 'http://sourceforge.net/projects/tdiary/';
+		echo 'http://www.tdiary.org/';
 		exit;
 	 }
 }
@@ -579,13 +579,11 @@ if (isset($pkwk_dtd)) {
  <title><?php echo $title ?> - <?php echo $page_title ?></title>
 
  <link rel="SHORTCUT ICON" href="<?php echo $image['favicon'] ?>" />
- <link rel="stylesheet" type="text/css" media="all" href="skin/theme/base.css" />
- <link rel="stylesheet" type="text/css" media="all" href="skin/theme/<?php echo $theme ?>/<?php echo $theme ?>.css" />
- <link rel="stylesheet" type="text/css" media="screen" href="skin/tdiary.css.php?charset=<?php echo $css_charset ?>&amp;color=<?php echo $css_theme ?>" charset="<?php echo $css_charset ?>" />
- <link rel="stylesheet" type="text/css" media="print"  href="skin/tdiary.css.php?charset=<?php echo $css_charset ?>&amp;color=<?php echo $css_theme ?>&amp;media=print" charset="<?php echo $css_charset ?>" />
+ <link rel="stylesheet" type="text/css" media="all" href="<?php echo SKIN_DIR ?>theme/base.css" />
+ <link rel="stylesheet" type="text/css" media="all" href="<?php echo SKIN_DIR ?>theme/<?php echo $theme ?>/<?php echo $theme ?>.css" />
+ <link rel="stylesheet" type="text/css" media="screen" href="<?php echo SKIN_DIR ?>tdiary.css.php?charset=<?php echo $css_charset ?>&amp;color=<?php echo $css_theme ?>" charset="<?php echo $css_charset ?>" />
+ <link rel="stylesheet" type="text/css" media="print"  href="<?php echo SKIN_DIR ?>tdiary.css.php?charset=<?php echo $css_charset ?>&amp;color=<?php echo $css_theme ?>&amp;media=print" charset="<?php echo $css_charset ?>" />
  <link rel="alternate" type="application/rss+xml" title="RSS" href="<?php echo $link['rss'] ?>" /><?php // RSS auto-discovery ?>
-
-<?php if (PKWK_ALLOW_JAVASCRIPT && $trackback_javascript) { ?> <script type="text/javascript" src="skin/trackback.js"></script><?php } ?>
 
 <?php echo $head_tag ?>
 </head>
@@ -651,14 +649,12 @@ function _navigator($key, $value = '', $javascript = ''){
    <?php _navigator('search') ?>
    <?php _navigator('recent') ?>
    <?php _navigator('help')   ?>
-
-<?php if ($trackback) { ?> &nbsp;
-   <?php _navigator('trackback', $lang['trackback'] . '(' . tb_count($_page) . ')',
- 	($trackback_javascript == 1) ? 'onclick="OpenTrackback(this.href); return false"' : '') ?>
-<?php } ?>
-<?php if ($referer)   { ?> &nbsp;
-   <?php _navigator('refer') ?>
-<?php } ?>
+   <?php if ($enable_login) { ?>
+     <?php _navigator('login') ?>
+   <?php } ?>
+   <?php if ($enable_logout) { ?>
+     <?php _navigator('logout') ?>
+   <?php } ?>
 </div></div>
 <?php } else { ?>
 <div id="navigator"></div>
@@ -912,7 +908,7 @@ function _toolbar($key, $x = 20, $y = 20){
  Site admin: <a href="<?php echo $modifierlink ?>"><?php echo $modifier ?></a><p />
  <?php echo S_COPYRIGHT ?>.
  Powered by PHP <?php echo PHP_VERSION ?><br />
- HTML convert time: <?php echo $taketime ?> sec.
+ HTML convert time: <?php echo elapsedtime() ?> sec.
 
 </div><!-- class="footer" -->
 

@@ -1,7 +1,7 @@
 <?php
 // $Id: recent.inc.php,v 1.27 2011/01/25 15:01:01 henoheno Exp $
 // Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+//   2002-2007 PukiWiki Developers Team
 //   2002      Y.MASUI http://masui.net/pukiwiki/ masui@masui.net
 // License: GPL version 2
 //
@@ -44,8 +44,12 @@ function plugin_recent_convert()
 		++$exec_count;
 	}
 
-	if (! file_exists(PLUGIN_RECENT_CACHE))
-		return '#recent(): Cache file of RecentChanges not found' . '<br />';
+	if (! file_exists(PLUGIN_RECENT_CACHE)) {
+		put_lastmodified();
+		if (! file_exists(PLUGIN_RECENT_CACHE)) {
+			return '#recent(): Cache file of RecentChanges not found' . '<br />';
+		}
+	}
 
 	// Get latest N changes
 	$lines = file_head(PLUGIN_RECENT_CACHE, $recent_lines);
@@ -68,11 +72,12 @@ function plugin_recent_convert()
 		}
 
 		$s_page = htmlsc($page);
-		if($page == $vars['page']) {
+
+		if ($page === $vars['page']) {
 			// No need to link to the page you just read, or notify where you just read
 			$items .= ' <li>' . $s_page . '</li>' . "\n";
 		} else {
-			$r_page = rawurlencode($page);
+			$r_page = pagename_urlencode($page);
 			$passage = $show_passage ? ' ' . get_passage($time) : '';
 			$items .= ' <li><a href="' . $script . '?' . $r_page . '"' . 
 				' title="' . $s_page . $passage . '">' . $s_page . '</a></li>' . "\n";
@@ -83,4 +88,4 @@ function plugin_recent_convert()
 
 	return sprintf($_recent_plugin_frame, count($lines), $items);
 }
-?>
+

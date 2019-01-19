@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: attach.inc.php,v 1.92 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2003-2006 PukiWiki Developers Team
+// attach.inc.php
+// Copyright
+//   2003-2016 PukiWiki Development Team
 //   2002-2003 PANDA <panda@arino.jp> http://home.arino.jp/
 //   2002      Y.MASUI <masui@hisec.co.jp> http://masui.net/pukiwiki/
 //   2001-2002 Originally written by yu-ji
@@ -27,7 +27,7 @@ define('PLUGIN_ATTACH_DELETE_ADMIN_ONLY', TRUE); // FALSE or TRUE
 
 // 管理者が添付ファイルを削除するときは、バックアップを作らない
 // PLUGIN_ATTACH_DELETE_ADMIN_ONLY=TRUEのとき有効
-define('PLUGIN_ATTACH_DELETE_ADMIN_NOBACKUP', TRUE); // FALSE or TRUE
+define('PLUGIN_ATTACH_DELETE_ADMIN_NOBACKUP', FALSE); // FALSE or TRUE
 
 // アップロード/削除時にパスワードを要求する(ADMIN_ONLYが優先)
 define('PLUGIN_ATTACH_PASSWORD_REQUIRE', FALSE); // FALSE or TRUE
@@ -65,7 +65,7 @@ function plugin_attach_convert()
 
 	$ret = '';
 	if (! $nolist) {
-		$obj  = & new AttachPages($page);
+		$obj  = new AttachPages($page);
 		$ret .= $obj->toString($page, TRUE);
 	}
 	if (! $noform) {
@@ -139,7 +139,7 @@ function attach_filelist()
 
 	$page = isset($vars['page']) ? $vars['page'] : '';
 
-	$obj = & new AttachPages($page, 0);
+	$obj = new AttachPages($page, 0);
 
 	if (! isset($obj->pages[$page])) {
 		return '';
@@ -186,7 +186,7 @@ function attach_upload($file, $page, $pass = NULL)
 			'msg'=>$_attach_messages['err_adminpass']);
 	}
 
-	$obj = & new AttachFile($page, $file['name']);
+	$obj = new AttachFile($page, $file['name']);
 	if ($obj->exist)
 		return array('result'=>FALSE,
 			'msg'=>$_attach_messages['err_exists']);
@@ -195,7 +195,7 @@ function attach_upload($file, $page, $pass = NULL)
 		chmod($obj->filename, PLUGIN_ATTACH_FILE_MODE);
 
 	if (is_page($page))
-		touch(get_filename($page));
+		pkwk_touch_file(get_filename($page));
 
 	$obj->getstatus();
 	$obj->status['pass'] = ($pass !== TRUE && $pass !== NULL) ? md5($pass) : '';
@@ -208,7 +208,7 @@ function attach_upload($file, $page, $pass = NULL)
 		$footer['PAGE']     = & $page;
 
 		$footer['URI']      = get_script_uri() .
-			//'?' . rawurlencode($page);
+			//'?' . pagename_urlencode($page);
 
 			// MD5 may heavy
 			'?plugin=attach' .
@@ -236,7 +236,7 @@ function attach_info($err = '')
 	foreach (array('refer', 'file', 'age') as $var)
 		${$var} = isset($vars[$var]) ? $vars[$var] : '';
 
-	$obj = & new AttachFile($refer, $file, $age);
+	$obj = new AttachFile($refer, $file, $age);
 	return $obj->getstatus() ?
 		$obj->info($err) :
 		array('msg'=>$_attach_messages['err_notfound']);
@@ -253,7 +253,7 @@ function attach_delete()
 	if (is_freeze($refer) || ! is_editable($refer))
 		return array('msg'=>$_attach_messages['err_noparm']);
 
-	$obj = & new AttachFile($refer, $file, $age);
+	$obj = new AttachFile($refer, $file, $age);
 	if (! $obj->getstatus())
 		return array('msg'=>$_attach_messages['err_notfound']);
 		
@@ -272,7 +272,7 @@ function attach_freeze($freeze)
 	if (is_freeze($refer) || ! is_editable($refer)) {
 		return array('msg'=>$_attach_messages['err_noparm']);
 	} else {
-		$obj = & new AttachFile($refer, $file, $age);
+		$obj = new AttachFile($refer, $file, $age);
 		return $obj->getstatus() ?
 			$obj->freeze($freeze, $pass) :
 			array('msg'=>$_attach_messages['err_notfound']);
@@ -291,7 +291,7 @@ function attach_rename()
 	if (is_freeze($refer) || ! is_editable($refer)) {
 		return array('msg'=>$_attach_messages['err_noparm']);
 	}
-	$obj = & new AttachFile($refer, $file, $age);
+	$obj = new AttachFile($refer, $file, $age);
 	if (! $obj->getstatus())
 		return array('msg'=>$_attach_messages['err_notfound']);
 
@@ -308,7 +308,7 @@ function attach_open()
 		${$var} = isset($vars[$var]) ? $vars[$var] : '';
 	}
 
-	$obj = & new AttachFile($refer, $file, $age);
+	$obj = new AttachFile($refer, $file, $age);
 	return $obj->getstatus() ?
 		$obj->open() :
 		array('msg'=>$_attach_messages['err_notfound']);
@@ -321,7 +321,7 @@ function attach_list()
 
 	$refer = isset($vars['refer']) ? $vars['refer'] : '';
 
-	$obj = & new AttachPages($refer);
+	$obj = new AttachPages($refer);
 
 	$msg = $_attach_messages[($refer == '') ? 'msg_listall' : 'msg_listpage'];
 	$body = ($refer == '' || isset($obj->pages[$refer])) ?
@@ -345,41 +345,35 @@ function attach_showform()
 
 //-------- サービス
 // mime-typeの決定
-function attach_mime_content_type($filename)
+function attach_mime_content_type($filename, $displayname)
 {
 	$type = 'application/octet-stream'; // default
 
 	if (! file_exists($filename)) return $type;
-
-	$size = @getimagesize($filename);
-	if (is_array($size)) {
-		switch ($size[2]) {
-			case 1: return 'image/gif';
-			case 2: return 'image/jpeg';
-			case 3: return 'image/png';
-			case 4: return 'application/x-shockwave-flash';
+	$pathinfo = pathinfo($displayname);
+	$ext0 = $pathinfo['extension'];
+	if (preg_match('/^(gif|jpg|jpeg|png|swf)$/i', $ext0)) {
+		$size = @getimagesize($filename);
+		if (is_array($size)) {
+			switch ($size[2]) {
+				case 1: return 'image/gif';
+				case 2: return 'image/jpeg';
+				case 3: return 'image/png';
+				case 4: return 'application/x-shockwave-flash';
+			}
 		}
 	}
-
-	$matches = array();
-	if (! preg_match('/_((?:[0-9A-F]{2})+)(?:\.\d+)?$/', $filename, $matches))
-		return $type;
-
-	$filename = decode($matches[1]);
-
 	// mime-type一覧表を取得
 	$config = new Config(PLUGIN_ATTACH_CONFIG_PAGE_MIME);
 	$table = $config->read() ? $config->get('mime-type') : array();
 	unset($config); // メモリ節約
-
 	foreach ($table as $row) {
 		$_type = trim($row[0]);
 		$exts = preg_split('/\s+|,/', trim($row[1]), -1, PREG_SPLIT_NO_EMPTY);
 		foreach ($exts as $ext) {
-			if (preg_match("/\.$ext$/i", $filename)) return $_type;
+			if (preg_match("/\.$ext$/i", $displayname)) return $_type;
 		}
 	}
-
 	return $type;
 }
 
@@ -449,14 +443,16 @@ class AttachFile
 		$this->logname  = $this->basename . '.log';
 		$this->exist    = file_exists($this->filename);
 		$this->time     = $this->exist ? filemtime($this->filename) - LOCALZONE : 0;
-		$this->md5hash  = $this->exist ? md5_file($this->filename) : '';
+	}
+
+	function gethash()
+	{
+		return $this->exist ? md5_file($this->filename) : '';
 	}
 
 	// ファイル情報取得
 	function getstatus()
 	{
-		if (! $this->exist) return FALSE;
-
 		// ログファイル取得
 		if (file_exists($this->logname)) {
 			$data = file($this->logname);
@@ -465,11 +461,11 @@ class AttachFile
 			}
 			$this->status['count'] = explode(',', $this->status['count']);
 		}
+		if (! $this->exist) return FALSE;
 		$this->time_str = get_date('Y/m/d H:i:s', $this->time);
 		$this->size     = filesize($this->filename);
 		$this->size_str = sprintf('%01.1f', round($this->size/1024, 1)) . 'KB';
-		$this->type     = attach_mime_content_type($this->filename);
-
+		$this->type     = attach_mime_content_type($this->filename, $this->file);
 		return TRUE;
 	}
 
@@ -563,6 +559,7 @@ class AttachFile
 			}
 		}
 		$info = $this->toString(TRUE, FALSE);
+		$hash = $this->gethash();
 
 		$retval = array('msg'=>sprintf($_attach_messages['msg_info'], htmlsc($this->file)));
 		$retval['body'] = <<< EOD
@@ -574,7 +571,7 @@ class AttachFile
  <dt>$info</dt>
  <dd>{$_attach_messages['msg_page']}:$s_page</dd>
  <dd>{$_attach_messages['msg_filename']}:{$this->filename}</dd>
- <dd>{$_attach_messages['msg_md5hash']}:{$this->md5hash}</dd>
+ <dd>{$_attach_messages['msg_md5hash']}:$hash</dd>
  <dd>{$_attach_messages['msg_filesize']}:{$this->size_str} ({$this->size} bytes)</dd>
  <dd>Content-type:{$this->type}</dd>
  <dd>{$_attach_messages['msg_date']}:{$this->time_str}</dd>
@@ -612,7 +609,7 @@ EOD;
 			if (PLUGIN_ATTACH_DELETE_ADMIN_ONLY || $this->age) {
 				return attach_info('err_adminpass');
 			} else if (PLUGIN_ATTACH_PASSWORD_REQUIRE &&
-				md5($pass) != $this->status['pass']) {
+				md5($pass) !== $this->status['pass']) {
 				return attach_info('err_password');
 			}
 		}
@@ -644,7 +641,7 @@ EOD;
 			$footer['FILENAME'] = & $this->file;
 			$footer['PAGE']     = & $this->page;
 			$footer['URI']      = get_script_uri() .
-				'?' . rawurlencode($this->page);
+				'?' . pagename_urlencode($this->page);
 			$footer['USER_AGENT']  = TRUE;
 			$footer['REMOTE_ADDR'] = TRUE;
 			pkwk_mail_notify($notify_subject, "\n", $footer) or
@@ -664,7 +661,7 @@ EOD;
 			if (PLUGIN_ATTACH_DELETE_ADMIN_ONLY || $this->age) {
 				return attach_info('err_adminpass');
 			} else if (PLUGIN_ATTACH_PASSWORD_REQUIRE &&
-				md5($pass) != $this->status['pass']) {
+				md5($pass) !== $this->status['pass']) {
 				return attach_info('err_password');
 			}
 		}
@@ -672,10 +669,37 @@ EOD;
 		if (file_exists($newbase)) {
 			return array('msg'=>$_attach_messages['err_exists']);
 		}
-		if (! PLUGIN_ATTACH_RENAME_ENABLE || ! rename($this->basename, $newbase)) {
+		if (! PLUGIN_ATTACH_RENAME_ENABLE) {
 			return array('msg'=>$_attach_messages['err_rename']);
 		}
-
+		if (! rename($this->basename, $newbase)) {
+			return array('msg'=>$_attach_messages['err_rename']);
+		}
+		// Rename primary file succeeded.
+		// Then, rename backup(archive) files and log file)
+		$rename_targets = array();
+		$dir = opendir(UPLOAD_DIR);
+		if ($dir) {
+			$matches_leaf = array();
+			if (preg_match('/(((?:[0-9A-F]{2})+)_((?:[0-9A-F]{2})+))$/', $this->basename, $matches_leaf)) {
+				$attachfile_leafname = $matches_leaf[1];
+				$attachfile_leafname_pattern = preg_quote($attachfile_leafname, '/');
+				$pattern = "/^({$attachfile_leafname_pattern})(\.((\d+)|(log)))$/";
+				$matches = array();
+				while ($file = readdir($dir)) {
+					if (! preg_match($pattern, $file, $matches))
+						continue;
+					$basename2 = $matches[0];
+					$newbase2 = $newbase . $matches[2];
+					$rename_targets[$basename2] = $newbase2;
+				}
+			}
+			closedir($dir);
+		}
+		foreach ($rename_targets as $basename2=>$newbase2) {
+			$basename2path = UPLOAD_DIR . $basename2;
+			rename($basename2path, $newbase2);
+		}
 		return array('msg'=>$_attach_messages['msg_renamed']);
 	}
 
@@ -700,24 +724,22 @@ EOD;
 		$filename = $this->file;
 
 		// Care for Japanese-character-included file name
+		$legacy_filename = mb_convert_encoding($filename, 'UTF-8', SOURCE_ENCODING);
 		if (LANG == 'ja') {
 			switch(UA_NAME . '/' . UA_PROFILE){
-			case 'Opera/default':
-				// Care for using _auto-encode-detecting_ function
-				$filename = mb_convert_encoding($filename, 'UTF-8', 'auto');
-				break;
 			case 'MSIE/default':
-				$filename = mb_convert_encoding($filename, 'SJIS', 'auto');
+				$legacy_filename = mb_convert_encoding($filename, 'SJIS', SOURCE_ENCODING);
 				break;
 			}
 		}
-		$utf8filename = mb_convert_encoding($filename, 'UTF-8', 'auto');
+		$utf8filename = mb_convert_encoding($filename, 'UTF-8', SOURCE_ENCODING);
 
 		ini_set('default_charset', '');
 		mb_http_output('pass');
 
 		pkwk_common_headers();
-		header('Content-Disposition: inline; filename="' . $filename . '"; filename*=utf-8\'\'' . rawurlencode($utf8filename));
+		header('Content-Disposition: inline; filename="' . $legacy_filename
+			. '"; filename*=utf-8\'\'' . rawurlencode($utf8filename));
 		header('Content-Length: ' . $this->size);
 		header('Content-Type: '   . $this->type);
 
@@ -739,7 +761,7 @@ class AttachFiles
 
 	function add($file, $age)
 	{
-		$this->files[$file][$age] = & new AttachFile($this->page, $file, $age);
+		$this->files[$file][$age] = new AttachFile($this->page, $file, $age);
 	}
 
 	// ファイル一覧を取得
@@ -755,7 +777,7 @@ class AttachFiles
 
 		$ret = '';
 		$files = array_keys($this->files);
-		sort($files);
+		sort($files, SORT_STRING);
 
 		foreach ($files as $file) {
 			$_files = array();
@@ -765,7 +787,7 @@ class AttachFiles
 			if (! isset($_files[0])) {
 				$_files[0] = htmlsc($file);
 			}
-			ksort($_files);
+			ksort($_files, SORT_NUMERIC);
 			$_file = $_files[0];
 			unset($_files[0]);
 			$ret .= " <li>$_file\n";
@@ -813,15 +835,14 @@ class AttachPages
 		$pattern = "/^({$page_pattern})_((?:[0-9A-F]{2})+){$age_pattern}$/";
 
 		$matches = array();
-		while ($file = readdir($dir)) {
-			if (! preg_match($pattern, $file, $matches))
-				continue;
+		while (($file = readdir($dir)) !== FALSE) {
+			if (! preg_match($pattern, $file, $matches)) continue;
 
 			$_page = decode($matches[1]);
 			$_file = decode($matches[2]);
 			$_age  = isset($matches[3]) ? $matches[3] : 0;
 			if (! isset($this->pages[$_page])) {
-				$this->pages[$_page] = & new AttachFiles($_page);
+				$this->pages[$_page] = new AttachFiles($_page);
 			}
 			$this->pages[$_page]->add($_file, $_age);
 		}
@@ -840,7 +861,7 @@ class AttachPages
 		$ret = '';
 
 		$pages = array_keys($this->pages);
-		sort($pages);
+		sort($pages, SORT_STRING);
 
 		foreach ($pages as $page) {
 			if (check_non_list($page)) continue;
@@ -849,4 +870,3 @@ class AttachPages
 		return "\n" . '<ul>' . "\n" . $ret . '</ul>' . "\n";
 	}
 }
-?>
