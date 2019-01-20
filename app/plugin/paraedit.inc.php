@@ -139,7 +139,7 @@ function plugin_paraedit_action()
 	$part = $vars['parnum'];
 	$index_num = 0;
 	$is_first_line = 1;
-	foreach (split ("\n", $postdata) as $line) {
+	foreach (expose ("\n", $postdata) as $line) {
 		if (preg_match("/^\*{1,3}/", $line)) {
 			$index_num++;
 		}
@@ -178,11 +178,10 @@ function _plugin_paraedit_mkeditlink($body)
 	// [edit]リンクの作成
 	global $script, $get, $post, $vars;
 	$lines = explode("\n", $body);
-	
+
 	$para_num = 1;
 	$lines2 = array();
 	foreach ($lines as $line) {
-//		#if (preg_match("/<\/h\d>$/", $line)) {
 		if (preg_match("/<h\d .*? paraedit_flag=on/", $line)) {
 			#$link = "$script?plugin=paraedit&parnum=$para_num&page=" . rawurlencode($vars[page]); // v 1.3.5
 			$line = preg_replace("/ paraedit_flag=on/", "", $line);

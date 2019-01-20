@@ -63,6 +63,9 @@ if ($notify) {
 	require(LIB_DIR . 'mail.php'); // Mail notification
 }
 
+include_once(PLUGIN_DIR . 'paraedit.inc.php');
+$post["msg"] = _plugin_paraedit_parse_postmsg($post["msg_before"], $post["msg"], $post["msg_after"]);
+
 /////////////////////////////////////////////////
 // Main
 
