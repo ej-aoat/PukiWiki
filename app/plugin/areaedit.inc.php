@@ -450,7 +450,7 @@ function plugin_areaedit_action_block()
 	
 	$update_flag = FALSE;
 	if ( array_key_exists('areaedit_msg', $vars) ){
-		$lines = expose("\n", str_replace("\r",'',$vars['areaedit_msg']));
+		$lines = explode("\n", str_replace("\r",'',$vars['areaedit_msg']));
 		$update_flag = TRUE;
 	}
 	else if ( $collect ){

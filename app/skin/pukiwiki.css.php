@@ -38,8 +38,6 @@ blockquote { margin-left:32px; }
 body,td {
 	color:black;
 	background-color:white;
-	margin-left:2%;
-	margin-right:2%;
 	font-size:90%;
 	font-family:verdana, arial, helvetica, Sans-Serif;
 }
@@ -78,32 +76,31 @@ a:hover {
 
 h1, h2 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
-	color:inherit;
-	background-color:#DDEEFF;
+	font-size: 150%;
+	color: #ff8c1a;
 	padding:.3em;
 	border:0px;
 	margin:0px 0px .5em 0px;
 }
 h3 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
-	border-bottom:  3px solid #DDEEFF;
-	border-top:     1px solid #DDEEFF;
-	border-left:   10px solid #DDEEFF;
-	border-right:   5px solid #DDEEFF;
+	font-size: 120%;
 
 	color:inherit;
 	background-color:#FFFFFF;
-	padding:.3em;
+	padding: 0.25em 0.5em;
 	margin:0px 0px .5em 0px;
+	border-left: solid 5px #7db4e6;
 }
 h4 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
-	border-left:   18px solid #DDEEFF;
+	font-size: 100%;
 
 	color:inherit;
 	background-color:#FFFFFF;
 	padding:.3em;
 	margin:0px 0px .5em 0px;
+	border-bottom: dashed 2px #6594e0;
 }
 h5, h6 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
@@ -118,9 +115,12 @@ h1.title {
 	font-size: 30px;
 	font-weight:bold;
 	background-color:transparent;
-	padding: 12px 0px 0px 0px;
+	padding: 0;
+	margin: 0 0.75em 0 0;
 	border: 0px;
-	margin: 12px 0px 0px 0px;
+}
+h1.title a {
+	color: #c2c2d6;
 }
 
 #body h1,#body h2,#body h3,#body h4 {
@@ -391,18 +391,21 @@ div#menubar ul li {
 
 div#menubar h2 {
 	margin-top: 0.5em;
+	font-size: 100%;
 }
 
 div#menubar h3 {
 	margin-top: 0.5em;
+	font-size: 100%;
 }
 
 div#menubar h4 {
 	margin-top: 0.5em;
-	font-size:110%;
+	font-size:100%;
 }
 
 div#menubar h5 {
+	font-size: 100%;
 	margin-top: 0.5em;
 }
 
@@ -685,6 +688,15 @@ td.vote_td1 {
 td.vote_td2 {
 	color:inherit;
 	background-color:#EEF5FF;
+}
+
+/* topicpath.inc.php */
+.breadcrumb {
+	padding: .35rem 1rem
+}
+
+.breadcrumb > li + li:before {
+	content: ">";
 }
 
 /* contentsx */

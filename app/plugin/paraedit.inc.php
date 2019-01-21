@@ -139,7 +139,7 @@ function plugin_paraedit_action()
 	$part = $vars['parnum'];
 	$index_num = 0;
 	$is_first_line = 1;
-	foreach (expose ("\n", $postdata) as $line) {
+	foreach (explode ("\n", $postdata) as $line) {
 		if (preg_match("/^\*{1,3}/", $line)) {
 			$index_num++;
 		}

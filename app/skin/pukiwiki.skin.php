@@ -75,10 +75,12 @@ if (isset($pkwk_dtd)) {
  <meta http-equiv="content-style-type" content="text/css" />
 <?php if ($nofollow || ! $is_read)  { ?> <meta name="robots" content="NOINDEX,NOFOLLOW" /><?php } ?>
 <?php if (PKWK_ALLOW_JAVASCRIPT && isset($javascript)) { ?> <meta http-equiv="Content-Script-Type" content="text/javascript" /><?php } ?>
+ <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
  <title><?php echo $title ?> - <?php echo $page_title ?></title>
 
  <link rel="SHORTCUT ICON" href="<?php echo $image['favicon'] ?>" />
+ <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
  <link rel="stylesheet" type="text/css" media="screen" href="<?php echo SKIN_DIR ?>pukiwiki.css.php?charset=<?php echo $css_charset ?>" charset="<?php echo $css_charset ?>" />
  <link rel="stylesheet" type="text/css" media="print"  href="<?php echo SKIN_DIR ?>pukiwiki.css.php?charset=<?php echo $css_charset ?>&amp;media=print" charset="<?php echo $css_charset ?>" />
  <link rel="alternate" type="application/rss+xml" title="RSS" href="<?php echo $link['rss'] ?>" /><?php // RSS auto-discovery ?>
@@ -86,99 +88,133 @@ if (isset($pkwk_dtd)) {
 
 <?php echo $head_tag ?>
 </head>
-<body>
-
-<div id="header">
- <a href="<?php echo $link['top'] ?>"><img id="logo" src="<?php echo IMAGE_DIR . $image['logo'] ?>" width="80" height="80" alt="[PukiWiki]" title="[PukiWiki]" /></a>
-
- <h1 class="title"><?php echo $page ?></h1>
-
-<?php if ($is_page) { ?>
- <?php if(SKIN_DEFAULT_DISABLE_TOPICPATH) { ?>
-   <a href="<?php echo $link['reload'] ?>"><span class="small"><?php echo $link['reload'] ?></span></a>
- <?php } else { ?>
-   <span class="small">
-   <?php require_once(PLUGIN_DIR . 'topicpath.inc.php'); echo plugin_topicpath_inline(); ?>
-   </span>
- <?php } ?>
-<?php } ?>
-
-</div>
-
-<div id="navigator">
-<?php if(PKWK_SKIN_SHOW_NAVBAR) { ?>
 <?php
-function _navigator($key, $value = '', $javascript = ''){
+function _navigator($key, $value = '', $javascript = '', $class = 'dropdown-item'){
 	$lang = & $GLOBALS['_LANG']['skin'];
 	$link = & $GLOBALS['_LINK'];
 	if (! isset($lang[$key])) { echo 'LANG NOT FOUND'; return FALSE; }
 	if (! isset($link[$key])) { echo 'LINK NOT FOUND'; return FALSE; }
 	if (! PKWK_ALLOW_JAVASCRIPT) $javascript = '';
 
-	echo '<a href="' . $link[$key] . '" ' . $javascript . '>' .
+	echo '<a class="' . $class . '" href="' . $link[$key] . '" ' . $javascript . '>' .
 		(($value === '') ? $lang[$key] : $value) .
 		'</a>';
 
 	return TRUE;
 }
 ?>
- [ <?php _navigator('top') ?> ] &nbsp;
+<body>
+
+<nav id="header" class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
+	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+		<span class="navbar-toggler-icon"></span>
+	</button>
+	<?php if(PKWK_SKIN_SHOW_NAVBAR) { ?>
+	<div class="collapse navbar-collapse" id="navbarSupportedContent">
+		<a class="navbar-brand" href="<?php echo $link['top'] ?>">
+			<img id="logo" src="<?php echo IMAGE_DIR . $image['logo'] ?>" width="40" height="40" alt="[PukiWiki]" title="[PukiWiki]" />
+		</a>
+		<h1 class="title"><?php echo $page ?></h1>
+		<ul class="navbar-nav mr-auto">
+			<li class="nav-item active">
+				<?php _navigator('top','','','nav-link') ?>
+			</li>
+			<li class="nav-item dropdown">
+				<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+					ページ
+				</a>
+				<div class="dropdown-menu" aria-labelledby="navbarDropdown">
+					<?php if ($is_page) { ?>
+					<?php if ($rw) { ?>
+						<?php _navigator('edit') ?>
+						<?php if ($is_read && $function_freeze) { ?>
+							<?php (! $is_freeze) ? _navigator('freeze') : _navigator('unfreeze') ?>
+						<?php } ?>
+					<?php } ?>
+					<?php _navigator('diff') ?>
+					<?php if ($do_backup) { ?>
+						<?php _navigator('backup') ?>
+					<?php } ?>
+					<?php if ($rw && (bool)ini_get('file_uploads')) { ?>
+						<?php _navigator('upload') ?>
+					<?php } ?>
+					<?php _navigator('reload') ?>
+					&nbsp;
+					<?php } ?>
+					
+				</div>
+			</li>
+			<li class="nav-item dropdown">
+				<a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+					サイト
+				</a>
+				<div class="dropdown-menu" aria-labelledby="navbarDropdown">
+					<?php if ($rw) { ?>
+						<?php _navigator('new') ?>
+					<?php } ?>
+					<?php _navigator('list') ?>
+					<?php if (arg_check('list')) { ?>
+						<?php _navigator('filelist') ?>
+					<?php } ?>
+						<?php _navigator('search') ?>
+						<?php _navigator('recent') ?>
+						<div class="dropdown-divider"></div>
+						<?php _navigator('help')   ?>
+					<?php if ($enable_login) { ?>
+						<div class="dropdown-divider"></div>
+						<?php _navigator('login') ?>
+					<?php } ?>
+					<?php if ($enable_logout) { ?>
+						<div class="dropdown-divider"></div>
+						<?php _navigator('logout') ?>
+					<?php } ?>
+				</div>
+			</li>
+		</ul>
+		<form class="form-inline my-2 my-lg-0" action="<?php echo $link['search'] ?>" method="POST">
+			<input type="hidden" name="encode_hint" value="ぷ">
+			<input class="form-control mr-sm-2" type="search" name="word" placeholder="Search" aria-label="Search">
+			<button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+		</form>
+	</div>
+	<?php } // PKWK_SKIN_SHOW_NAVBAR ?>
+</nav>
 
 <?php if ($is_page) { ?>
- [
- <?php if ($rw) { ?>
-	<?php _navigator('edit') ?> |
-	<?php if ($is_read && $function_freeze) { ?>
-		<?php (! $is_freeze) ? _navigator('freeze') : _navigator('unfreeze') ?> |
-	<?php } ?>
+ <?php if(SKIN_DEFAULT_DISABLE_TOPICPATH) { ?>
+   <a href="<?php echo $link['reload'] ?>"><span class="small"><?php echo $link['reload'] ?></span></a>
+ <?php } else { ?>
+	<nav aria-label="breadcrumb">
+	<ol class="breadcrumb">
+   <?php require_once(PLUGIN_DIR . 'topicpath.inc.php'); echo plugin_topicpath_inline(); ?>
+   </ol>
+   </nav>
  <?php } ?>
- <?php _navigator('diff') ?>
- <?php if ($do_backup) { ?>
-	| <?php _navigator('backup') ?>
- <?php } ?>
- <?php if ($rw && (bool)ini_get('file_uploads')) { ?>
-	| <?php _navigator('upload') ?>
- <?php } ?>
- | <?php _navigator('reload') ?>
- ] &nbsp;
 <?php } ?>
 
- [
- <?php if ($rw) { ?>
-	<?php _navigator('new') ?> |
- <?php } ?>
-   <?php _navigator('list') ?>
- <?php if (arg_check('list')) { ?>
-	| <?php _navigator('filelist') ?>
- <?php } ?>
- | <?php _navigator('search') ?>
- | <?php _navigator('recent') ?>
- | <?php _navigator('help')   ?>
- <?php if ($enable_login) { ?>
- | <?php _navigator('login') ?>
- <?php } ?>
- <?php if ($enable_logout) { ?>
- | <?php _navigator('logout') ?>
- <?php } ?>
- ]
-<?php } // PKWK_SKIN_SHOW_NAVBAR ?>
+<div id="navigator">
+
 </div>
 
-<?php echo $hr ?>
-
 <?php if ($menu !== FALSE) { ?>
-<table border="0" style="width:100%">
- <tr>
-  <td class="menubar">
-   <div id="menubar"><?php echo $menu ?></div>
-  </td>
-  <td valign="top">
-  <div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
-  </td>
- </tr>
-</table>
+<div class="container-fluid">
+	<div class="row">
+		<div class="col col-auto menubar">
+			<div id="menubar"><?php echo $menu ?></div>
+		</div>
+		<div class="col col-10">
+			<div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
+		</div>
+	</div>
+</div>
 <?php } else { ?>
-	<div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
+<div class="container-fluid">
+	<div class="row">
+		<div class="col">
+			<div id="body"><?php include_once 'plugin/paraedit.inc.php'; echo _plugin_paraedit_mkeditlink($body); ?></div>
+		</div>
+	</div>
+</div>
 <?php } ?>
 
 <?php if ($notes != '') { ?>
@@ -284,5 +320,8 @@ function _toolbar($key, $x = 20, $y = 20){
  Powered by PHP <?php echo PHP_VERSION ?>. HTML convert time: <?php echo elapsedtime() ?> sec.
 </div>
 
+<script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>
 </body>
 </html>

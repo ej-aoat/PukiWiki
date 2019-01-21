@@ -54,20 +54,20 @@ function plugin_topicpath_inline()
 		if (! $b_link)  {
 			// This page ($_landing == $page)
 			$b_link = TRUE;
-			$topic_path[] = $element;
+			$topic_path[] ='<li class="breadcrumb-item">' . $element . '</li>';
 		} else if (PKWK_READONLY && ! is_page($_landing)) {
 			// Page not exists
-			$topic_path[] = $element;
+			$topic_path[] ='<li class="breadcrumb-item">' . $element . '</li>';
 		} else {
 			// Page exists or not exists
-			$topic_path[] = '<a href="' . $script . '?' . $landing . '">' .
-				$element . '</a>';
+			$topic_path[] = '<li class="breadcrumb-item"><a href="' . $script . '?' . $landing . '">' .
+				$element . '</a></li>';
 		}
 	}
 
 	if (PLUGIN_TOPICPATH_TOP_DISPLAY)
-		$topic_path[] = make_pagelink($defaultpage, PLUGIN_TOPICPATH_TOP_LABEL);
+		$topic_path[] = '<li class="breadcrumb-item">' . make_pagelink($defaultpage, PLUGIN_TOPICPATH_TOP_LABEL) . '</li>';
 
-	return join(PLUGIN_TOPICPATH_TOP_SEPARATOR, array_reverse($topic_path));
+	return join('', array_reverse($topic_path));
 }
 
