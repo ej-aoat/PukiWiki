@@ -70,9 +70,6 @@ define(_PARAEDIT_SEPARATE_STR, '_PaRaeDiT_');
 
 function plugin_paraedit_init()
 {
-	// init
-	// プログラムファイル読み込み
-	require(LIB_DIR . 'init.php');
 }
 
 
