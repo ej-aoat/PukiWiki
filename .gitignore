@@ -36,3 +36,18 @@ Index.dat
 .buildpath
 .settings
 .idea/
+
+# Data Folder
+data/*
+!data/attach/.htaccess
+!data/attach/index.html
+!data/backup/.htaccess
+!data/backup/index.html
+!data/cache/.htaccess
+!data/cache/index.html
+!data/counter/.htaccess
+!data/counter/index.html
+!data/diff/.htaccess
+!data/diff/index.html
+!data/wiki/.htaccess
+!data/wiki/index.html
