@@ -1731,7 +1731,7 @@ class TableEdit2CsvAction
 		if ($this->error) return $file_error;
 	
 
-		$obj = & new TableEdit2CsvConversion($page, $file, $opt['charset_in'], 'import');
+		$obj = new TableEdit2CsvConversion($page, $file, $opt['charset_in'], 'import');
 
 		$csv_source = array();
 		$fp = @fopen($file['tmp_name'], 'r');
@@ -1766,7 +1766,7 @@ class TableEdit2CsvAction
 		$opt_name = $opt['charset_out'] . $opt['end_of_line'] . $opt_name;
 		$file['name'] = 'table_data' . $opt['table_num'] . '_' . $opt_name . '.csv';
 	
-		$obj = & new TableEdit2CsvConversion($page, $file, SOURCE_ENCODING, 'export');
+		$obj = new TableEdit2CsvConversion($page, $file, SOURCE_ENCODING, 'export');
 
 		$obj->w_quote =  $opt['w_quote'];
 		if ( strpos($opt['column_w_q'], ',') === FALSE ) {
