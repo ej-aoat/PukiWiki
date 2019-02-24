@@ -37,6 +37,9 @@ Index.dat
 .settings
 .idea/
 
+# vagrant
+.vagrant
+
 # Data Folder
 data/*
 !data/attach/.htaccess
