@@ -187,6 +187,7 @@ tfoot th.style_th {
 	text-align:left;
 	color:inherit;
 	background-color:#ccd5dd;
+	border-collapse: unset;
 }
 .style_th {
 	padding:5px;
@@ -370,7 +371,7 @@ div#menubar {
 <?php   if ($media == 'print') { ?>
 	display:none;
 <?php   } else { ?>
-	width:9em;
+	width: auto;
 	padding:0px;
 	margin:4px;
 	word-break:break-all;
