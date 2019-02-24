@@ -207,7 +207,7 @@ class PluginHtmlinsert
     {
         if (! is_page($page)) return 1; 
         if (! (PKWK_READONLY > 0 or $this->is_edit_auth($page) or is_freeze($page))) return 2;
-        $lines = get_source($page);
+        $lines = remove_author_info(get_source($page));
         if (is_freeze($page) && preg_match($this->syntax['freeze'], $lines[0])) { // remove #freeze
             array_shift($lines);
         }
