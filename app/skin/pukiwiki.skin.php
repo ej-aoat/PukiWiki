@@ -114,7 +114,19 @@ function _navigator($key, $value = '', $javascript = '', $class = 'dropdown-item
 		<a class="navbar-brand" href="<?php echo $link['top'] ?>">
 			<img id="logo" src="<?php echo IMAGE_DIR . $image['logo'] ?>" width="40" height="40" alt="[PukiWiki]" title="[PukiWiki]" />
 		</a>
-		<h1 class="title"><?php echo $page ?></h1>
+<?php
+// ページ名が階層化ページ名の場合に、
+// 階層化文字列部分を除去したタイトルを表示する。
+mb_regex_encoding(SOURCE_ENCODING); //mb_ereg() で文字化けしないようにおまじない
+if($page == make_search($_page) && mb_ereg("(.*)/(.*)", $_page, $regs)){
+    // $_page の中身はエスケープされていないので、忘れずにしておく
+    $t = htmlspecialchars($regs[2]); //ページタイトル
+    $p = htmlspecialchars($regs[1]); //タイトルを除いたページのパス
+    echo "<h1 class=\"title\">$t</h1>";
+}else{
+    echo "<h1 class=\"title\">$page</h1>";
+}
+?>
 		<ul class="navbar-nav mr-auto">
 			<li class="nav-item active">
 				<?php _navigator('top','','','nav-link') ?>
@@ -199,7 +211,7 @@ function _navigator($key, $value = '', $javascript = '', $class = 'dropdown-item
 <?php if ($menu !== FALSE) { ?>
 <div class="container-fluid">
 	<div class="row">
-		<div class="col col-auto menubar">
+		<div class="col col-2 menubar">
 			<div id="menubar"><?php echo $menu ?></div>
 		</div>
 		<div class="col col-10">
