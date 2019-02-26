@@ -239,7 +239,7 @@ class PluginIncludex
      * @param array $argoptions options before evaluated
      * @return array $options
      */     
-    function check_options($options, $unknowns = array(), $argoptions)
+    function check_options($options, $unknowns = array(), $argoptions = null)
     {
         if ($options['title'] != 'on') {
             if ($options['title'] == 'nolink') {
