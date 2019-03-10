@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 // PukiWiki - Yet another WikiWikiWeb clone.
 // $Id: include_template.inc.php,v 1.21 Time-stamp: <2009-09-08 06:40:48 kahata> Exp $
 //
