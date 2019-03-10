@@ -317,7 +317,7 @@ function plugin_include_template_convert()
 	$get['page'] = $post['page'] = $vars['page'] = $page;
 
 	if (check_readable($page, false, false)) {
-		$output = join('', get_source($page));
+		$output = join('', remove_author_info(get_source($page)));
 
 		// キーワード置換前処理　Time-stamp: <07/06/16(土) 10:18:17 kahata>
 		foreach ($include_template->kw_replace as $key => $val) {
@@ -425,7 +425,7 @@ class include_template
 	//生置換する文字をパラメータリストから連想配列に取り込む
 	// Time-stamp: <07/06/16(土) 10:31:50 kahata>
 //			if(preg_match("'$delim(.+?)$delim's",$key,$matches)) {
-			if(ereg("$delim(.+)$delim",$key,$matches)) {
+			if(preg_match("/$delim(.+)$delim/",$key,$matches)) {
     				$this->array_push_associative($this->kw_replace, array($matches[1] => $v));
 			} else {
     				$value[$key] = $v;
