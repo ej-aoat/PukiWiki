@@ -2,11 +2,28 @@
 // PukiWiki - Yet another WikiWikiWeb clone.
 // make_link.php
 // Copyright
-//   2003-2016 PukiWiki Development Team
+//   2003-2019 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
 // Hyperlink-related functions
+
+// To get page exists or filetimes without accessing filesystem
+// Type: array (page => filetime)
+$_cached_page_filetime = null;
+
+// Get filetime from cache
+function fast_get_filetime($page)
+{
+	global $_cached_page_filetime;
+	if (is_null($_cached_page_filetime)) {
+		return get_filetime($page);
+	}
+	if (isset($_cached_page_filetime[$page])) {
+		return $_cached_page_filetime[$page];
+	}
+	return get_filetime($page);
+}
 
 // Hyperlink decoration
 function make_link($string, $page = '')
@@ -30,16 +47,18 @@ class InlineConverter
 	var $result;
 
 	function get_clone($obj) {
-		static $clone_func;
-
-		if (! isset($clone_func)) {
+		static $clone_exists;
+		if (! isset($clone_exists)) {
 			if (version_compare(PHP_VERSION, '5.0.0', '<')) {
-				$clone_func = create_function('$a', 'return $a;');
+				$clone_exists = false;
 			} else {
-				$clone_func = create_function('$a', 'return clone $a;');
+				$clone_exists = true;
 			}
 		}
-		return $clone_func($obj);
+		if ($clone_exists) {
+			return clone ($obj);
+		}
+		return $obj;
 	}
 
 	function __clone() {
@@ -51,6 +70,10 @@ class InlineConverter
 	}
 
 	function InlineConverter($converters = NULL, $excludes = NULL)
+	{
+		$this->__construct($converters, $excludes);
+	}
+	function __construct($converters = NULL, $excludes = NULL)
 	{
 		if ($converters === NULL) {
 			$converters = array(
@@ -150,8 +173,11 @@ class Link
 	var $body;
 	var $alias;
 
-	// Constructor
 	function Link($start)
+	{
+		$this->__construct($start);
+	}
+	function __construct($start)
 	{
 		$this->start = $start;
 	}
@@ -211,7 +237,11 @@ class Link_plugin extends Link
 
 	function Link_plugin($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -280,7 +310,11 @@ class Link_note extends Link
 {
 	function Link_note($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -307,12 +341,10 @@ EOD;
 		if (PKWK_ALLOW_RELATIVE_FOOTNOTE_ANCHOR) {
 			$script = '';
 		} else {
-			$script = get_script_uri() . '?' . pagename_urlencode($page);
+			$script = get_page_uri($page);
 		}
-
 		$id   = ++$note_id;
 		$note = make_link($body);
-		$page = isset($vars['page']) ? rawurlencode($vars['page']) : '';
 
 		// Footnote
 		$foot_explain[$id] = '<a id="notefoot_' . $id . '" href="' .
@@ -327,7 +359,7 @@ EOD;
 			$title = strip_tags($note);
 			$count = mb_strlen($title, SOURCE_ENCODING);
 			$title = mb_substr($title, 0, PKWK_FOOTNOTE_TITLE_MAX, SOURCE_ENCODING);
-			$abbr  = (mb_strlen($title) < $count) ? '...' : '';
+			$abbr  = (PKWK_FOOTNOTE_TITLE_MAX < $count) ? '...' : '';
 			$title = ' title="' . $title . $abbr . '"';
 		}
 		$name = '<a id="notetext_' . $id . '" href="' . $script .
@@ -348,7 +380,11 @@ class Link_url extends Link
 {
 	function Link_url($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -395,7 +431,11 @@ class Link_url_interwiki extends Link
 {
 	function Link_url_interwiki($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -435,7 +475,11 @@ class Link_mailto extends Link
 
 	function Link_mailto($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -477,7 +521,11 @@ class Link_interwikiname extends Link
 
 	function Link_interwikiname($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -510,8 +558,6 @@ EOD;
 
 	function set($arr, $page)
 	{
-		global $script;
-
 		list(, $alias, , $name, $this->param) = $this->splice($arr);
 
 		$matches = array();
@@ -520,7 +566,7 @@ EOD;
 
 		$url = get_interwiki_url($name, $this->param);
 		$this->url = ($url === FALSE) ?
-			$script . '?' . pagename_urlencode('[[' . $name . ':' . $this->param . ']]') :
+			get_base_uri() . '?' . pagename_urlencode('[[' . $name . ':' . $this->param . ']]') :
 			htmlsc($url);
 
 		return parent::setParam(
@@ -546,7 +592,11 @@ class Link_bracketname extends Link
 
 	function Link_bracketname($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -608,7 +658,11 @@ class Link_wikiname extends Link
 {
 	function Link_wikiname($start)
 	{
-		parent::Link($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -649,9 +703,13 @@ class Link_autolink extends Link
 
 	function Link_autolink($start)
 	{
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
 		global $autolink;
 
-		parent::Link($start);
+		parent::__construct($start);
 
 		if (! $autolink || ! file_exists(CACHE_DIR . 'autolink.dat'))
 			return;
@@ -695,7 +753,11 @@ class Link_autolink_a extends Link_autolink
 {
 	function Link_autolink_a($start)
 	{
-		parent::Link_autolink($start);
+		$this->__construct($start);
+	}
+	function __construct($start)
+	{
+		parent::__construct($start);
 	}
 
 	function get_pattern()
@@ -707,8 +769,9 @@ class Link_autolink_a extends Link_autolink
 // Make hyperlink for the page
 function make_pagelink($page, $alias = '', $anchor = '', $refer = '', $isautolink = FALSE)
 {
-	global $script, $vars, $link_compact, $related, $_symbol_noexists;
+	global $vars, $link_compact, $related, $_symbol_noexists;
 
+	$script = get_base_uri();
 	$s_page = htmlsc(strip_bracket($page));
 	$s_alias = ($alias == '') ? $s_page : $alias;
 
@@ -717,17 +780,14 @@ function make_pagelink($page, $alias = '', $anchor = '', $refer = '', $isautolin
 	$r_page  = pagename_urlencode($page);
 	$r_refer = ($refer == '') ? '' : '&amp;refer=' . rawurlencode($refer);
 
-	if (! isset($related[$page]) && $page !== $vars['page'] && is_page($page))
-		$related[$page] = get_filetime($page);
+	$page_filetime = fast_get_filetime($page);
+	$is_page = $page_filetime !== 0;
+	if (! isset($related[$page]) && $page !== $vars['page'] && is_page)
+		$related[$page] = $page_filetime;
 
-	if ($isautolink || is_page($page)) {
+	if ($isautolink || $is_page) {
 		// Hyperlink to the page
-		if ($link_compact) {
-			$title   = '';
-		} else {
-			$title   = ' title="' . $s_page . get_pg_passage($page, FALSE) . '"';
-		}
-
+		$attrs = get_filetime_a_attrs($page_filetime);
 		// AutoLink marker
 		if ($isautolink) {
 			$al_left  = '<!--autolink-->';
@@ -735,10 +795,20 @@ function make_pagelink($page, $alias = '', $anchor = '', $refer = '', $isautolin
 		} else {
 			$al_left = $al_right = '';
 		}
-
+		$title_attr_html = '';
+		if ($s_page !== $s_alias) {
+			$title_attr_html = ' title="' . $s_page . '"';
+		}
 		return $al_left . '<a ' . 'href="' . $script . '?' . $r_page . $anchor .
-			'"' . $title . '>' . $s_alias . '</a>' . $al_right;
+			'"' . $title_attr_html . ' class="' .
+			$attrs['class'] . '" data-mtime="' . $attrs['data_mtime'] .
+			'">' . $s_alias . '</a>' . $al_right;
 	} else {
+		// Support Page redirection
+		$redirect_page = get_pagename_on_redirect($page);
+		if ($redirect_page !== false) {
+			return make_pagelink($redirect_page, $s_alias);
+		}
 		// Dangling link
 		if (PKWK_READONLY) return $s_alias; // No dacorations
 
@@ -856,4 +926,69 @@ function get_interwiki_url($name, $param)
 	if ($len > 512) die_message('InterWiki URL too long: ' . $len . ' characters');
 
 	return $url;
+}
+
+function get_autoticketlink_def_page()
+{
+	return 'AutoTicketLinkName';
+}
+
+/**
+ * Get AutoTicketLink - JIRA projects from AutoTiketLinkName page
+ */
+function get_ticketlink_jira_projects()
+{
+	$autoticketlink_def_page = get_autoticketlink_def_page();
+	$active_jira_base_url = null;
+	$jira_projects = array();
+	foreach (get_source($autoticketlink_def_page) as $line) {
+		if (substr($line, 0, 1) !== '-') {
+			$active_jira_base_url = null;
+			continue;
+		}
+		$m = null;
+		if (preg_match('/^-\s*(jira)\s+(https?:\/\/[!~*\'();\/?:\@&=+\$,%#\w.-]+)\s*$/', $line, $m)) {
+			$active_jira_base_url = $m[2];
+		} else if (preg_match('/^--\s*([A-Z][A-Z0-9]{1,10}(?:_[A-Z0-9]{1,10}){0,2})(\s+(.+?))?\s*$/', $line, $m)) {
+			if ($active_jira_base_url) {
+				$project_key = $m[1];
+				$title = $m[2];
+				array_push($jira_projects, array(
+					'key' => $m[1],
+					'title' => $title,
+					'base_url' => $active_jira_base_url,
+				));
+			}
+		} else {
+			$active_jira_base_url = null;
+		}
+	}
+	return $jira_projects;
+}
+
+function init_autoticketlink_def_page()
+{
+	$autoticketlink_def_page = get_autoticketlink_def_page();
+	if (is_page($autoticketlink_def_page)) {
+		return;
+	}
+	$body = <<<EOS
+#freeze
+* AutoTicketLink definition [#def]
+
+Reference: https://pukiwiki.osdn.jp/?AutoTicketLink
+
+ - jira https://site1.example.com/jira/browse/
+ -- AAA Project title \$1
+ -- BBB Project title \$1
+ - jira https://site2.example.com/jira/browse/
+ -- PROJECTA Site2 \$1
+
+ (Default definition) pukiwiki.ini.php
+ $ticket_jira_default_site = array(
+   'title' => 'My JIRA - \$1',
+   'base_url' => 'https://issues.example.com/jira/browse/',
+ );
+EOS;
+	page_write($autoticketlink_def_page, $body);
 }

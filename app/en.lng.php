@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone.
 // en.lng.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2018 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -44,15 +44,23 @@ $_msg_notfound    = 'The page was not found.';
 $_msg_addline     = 'The added line is <span class="diff_added">THIS COLOR</span>.';
 $_msg_delline     = 'The deleted line is <span class="diff_removed">THIS COLOR</span>.';
 $_msg_goto        = 'Go to $1.';
-$_msg_andresult   = 'In the page <strong> $2</strong>, <strong> $3</strong> pages that contain all the terms $1 were found.';
-$_msg_orresult    = 'In the page <strong> $2</strong>, <strong> $3</strong> pages that contain at least one of the terms $1 were found.';
-$_msg_notfoundresult = 'No page which contains $1 has been found.';
+$_msg_andresult   = '$1 was found on <strong>$2</strong> pages out of <strong>$3</strong> pages.';
+$_msg_orresult    = 'At least one of the terms $1 was found on <strong>$2</strong> pages out of <strong>$3</strong> pages.';
+$_msg_notfoundresult = 'There are no pages containing $1 in <strong>$3</strong> pages.';
+$_msg_prev_results = '&lt;&lt; Previous $1 pages';
+$_msg_more_results = 'Next $1 pages &gt;&gt;';
 $_msg_symbol      = 'Symbols';
 $_msg_other       = 'Others';
 $_msg_help        = 'View Text Formatting Rules';
 $_msg_week        = array('Sun','Mon','Tue','Wed','Thu','Fri','Sat');
 $_msg_content_back_to_top = '<div class="jumpmenu"><a href="#navigator">&uarr;</a></div>';
 $_msg_word        = 'These search terms have been highlighted:';
+$_msg_unsupported_webbrowser = 'This function doesn\'t support your current Web browser.';
+$_msg_use_alternative_link = 'Please go to the following link destination: $1';
+$_msg_general_error  = 'An error occurred while processing.';
+
+$_msg_edit_cancel_confirm = 'The text you have entered will be discarded. Is it OK?';
+$_msg_edit_unloadbefore_message = 'Data you have entered will not be saved.';
 
 ///////////////////////////////////////
 // Symbols
@@ -71,7 +79,6 @@ $_btn_template  = 'Use page as template';
 $_btn_load      = 'Load';
 $_btn_edit      = 'Edit';
 $_btn_delete    = 'Delete';
-$_label_template_pages	= 'Template pages';
 
 ///////////////////////////////////////
 // Authentication
@@ -367,6 +374,9 @@ $_btn_and       = 'AND';
 $_btn_or        = 'OR';
 $_search_pages  = 'Search for page starts from $1';
 $_search_all    = 'Search for all pages';
+$_search_searching = 'Searching...';
+$_search_showing_result = 'Showing search results';
+$_search_detail = 'Show details';
 
 ///////////////////////////////////////
 // source.inc.php
@@ -434,4 +444,12 @@ $_loginform_messages = array(
 	'password' => 'Password',
 	'login' => 'Log in',
 	'invalid_username_or_password' => 'The username or password you entered is incorrect'
+);
+
+///////////////////////////////////////
+// external_link.inc.php
+$_external_link_messages = array(
+	'page_title' => 'External link: %s',
+	'desc' => 'The selected URL is not the contents of this site.',
+	'wait_n_seconds' => 'It will move to the page automatically after %s seconds.',
 );

@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone.
 // init.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2018 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -10,11 +10,11 @@
 
 // PukiWiki version / Copyright / Licence
 
-define('S_VERSION', '1.5.1');
+define('S_VERSION', '1.5.2');
 define('S_COPYRIGHT',
 	'<strong>PukiWiki ' . S_VERSION . '</strong>' .
-	' &copy; 2001-2016' .
-	' <a href="http://pukiwiki.osdn.jp/">PukiWiki Development Team</a>'
+	' &copy; 2001-2019' .
+	' <a href="https://pukiwiki.osdn.jp/">PukiWiki Development Team</a>'
 );
 
 /////////////////////////////////////////////////
@@ -101,7 +101,6 @@ if (defined('PKWK_UTF8_ENABLE')) {
 
 mb_language(MB_LANGUAGE);
 mb_internal_encoding(SOURCE_ENCODING);
-ini_set('mbstring.http_input', 'pass');
 mb_http_output('pass');
 mb_detect_order('auto');
 
@@ -135,10 +134,18 @@ $weeklabels = $_msg_week;
 // INI_FILE: Init $script
 
 if (isset($script)) {
-	get_script_uri($script); // Init manually
+	// Init manually
+	pkwk_script_uri_base(PKWK_URI_ABSOLUTE, true, $script);
 } else {
-	$script = get_script_uri(); // Init automatically
+	// Init automatically
+	$script = pkwk_script_uri_base(PKWK_URI_ABSOLUTE, true);
 }
+
+// INI_FILE: Auth settings
+if (isset($auth_type) && $auth_type === AUTH_TYPE_SAML) {
+	$auth_external_login_url_base = get_base_uri() . '?//cmd.saml//sso';
+}
+
 
 /////////////////////////////////////////////////
 // INI_FILE: $agents:  UserAgentの識別
@@ -147,7 +154,6 @@ $ua = 'HTTP_USER_AGENT';
 $user_agent = $matches = array();
 
 $user_agent['agent'] = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '';
-unset(${$ua}, $_SERVER[$ua], $HTTP_SERVER_VARS[$ua], $ua);	// safety
 
 foreach ($agents as $agent) {
 	if (preg_match($agent['pattern'], $user_agent['agent'], $matches)) {
@@ -330,6 +336,36 @@ if (empty($_POST)) {
 	$vars = array_merge($_GET, $_POST); // Considered reliable than $_REQUEST
 }
 
+/**
+ * Parse specified format query_string as params.
+ *
+ * For example: ?//key1.value2//key2.value2
+ */
+function parse_query_string_ext($query_string) {
+	$vars = array();
+	$m = null;
+	if (preg_match('#^//[^&]*#', $query_string, $m)) {
+		foreach (explode('//', $m[0]) as $item) {
+			$sp = explode('.', $item, 2);
+			if (isset($sp[0])) {
+				if (isset($sp[1])) {
+					$vars[$sp[0]] = $sp[1];
+				} else {
+					$vars[$sp[0]] = '';
+				}
+			}
+		}
+	}
+	return $vars;
+}
+if (isset($g_query_string) && $g_query_string) {
+	if (substr($g_query_string, 0, 2) === '//') {
+		// Parse ?//key.value//key.value format query string
+		$vars = array_merge($vars, parse_query_string_ext($g_query_string));
+	}
+}
+
+
 // 入力チェック: 'cmd=' and 'plugin=' can't live together
 if (isset($vars['cmd']) && isset($vars['plugin']))
 	die('Using both cmd= and plugin= is not allowed');
@@ -365,7 +401,8 @@ if (! isset($vars['cmd']) && ! isset($vars['plugin'])) {
 
 	$arg = preg_replace("#^([^&]*)&.*$#", "$1", $arg);
 	if ($arg == '') $arg = $defaultpage;
-	$arg = rawurldecode($arg);
+	if (strpos($arg, '=') !== false) $arg = $defaultpage; // Found '/?key=value'
+	$arg = urldecode($arg);
 	$arg = strip_bracket($arg);
 	$arg = input_filter($arg);
 	$get['page'] = $post['page'] = $vars['page'] = $arg;
@@ -395,6 +432,11 @@ $NotePattern = '/\(\(((?:(?>(?:(?!\(\()(?!\)\)(?:[^\)]|$)).)+)|(?R))*)\)\)/x';
 require(DATA_HOME . 'rules.ini.php');
 
 /////////////////////////////////////////////////
+// Load HTML Entity pattern
+// This pattern is created by 'plugin/update_entities.inc.php'
+require(LIB_DIR . 'html_entities.php');
+
+/////////////////////////////////////////////////
 // 初期設定(その他のグローバル変数)
 
 // 現在時刻
@@ -409,10 +451,7 @@ if ($usefacemark) $line_rules += $facemark_rules;
 unset($facemark_rules);
 
 // 実体参照パターンおよびシステムで使用するパターンを$line_rulesに加える
-//$entity_pattern = '[a-zA-Z0-9]{2,8}';
-$entity_pattern = trim(join('', file(CACHE_DIR . 'entities.dat')));
-
 $line_rules = array_merge(array(
-	'&amp;(#[0-9]+|#x[0-9a-f]+|' . $entity_pattern . ');' => '&$1;',
+	'&amp;(#[0-9]+|#x[0-9a-f]+|' . get_html_entity_pattern() . ');' => '&$1;',
 	"\r"          => '<br />' . "\n",	/* 行末にチルダは改行 */
 ), $line_rules);

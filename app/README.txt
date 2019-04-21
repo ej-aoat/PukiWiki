@@ -1,15 +1,15 @@
 名前
     PukiWiki - 自由にページを追加・削除・編集できるWebページ構築スクリプト
 
-    Version 1.5.1
+    Version 1.5.2
     Copyright
-      2001-2016 PukiWiki Development Team
+      2001-2019 PukiWiki Development Team
       2001-2002 yu-ji (Based on PukiWiki 1.3 by yu-ji)
     License: GPL version 2 or (at your option) any later version
 
     URL:
-      http://pukiwiki.osdn.jp/
-      http://pukiwiki.osdn.jp/dev/
+      https://pukiwiki.osdn.jp/
+      https://pukiwiki.osdn.jp/dev/
       https://osdn.jp/projects/pukiwiki/
 
 書式
@@ -30,7 +30,7 @@
     Webサイト」として情報を提供する構成も可能です。(この場合、Wiki風のデザイ
     ンである必要すらありません)
 
-    PukiWikiはPHP言語で書かれたプログラムなので、PHP(PHP4.1～PHP7)が動作す
+    PukiWikiはPHP言語で書かれたプログラムなので、PHP(PHP4.1～PHP7.3)が動作す
     るWebサーバーであれば容易に設置でき、軽快に動作します。
 
     PukiWikiは、yu-jiさんを含む PukiWiki Develpers Team やその貢献者が、各自の
@@ -233,17 +233,16 @@ Wikiの様子を見る
     その他、リリース版の基本的な使い方に関する情報はPukiWiki公式サイト
     をご覧下さい。以下のようなコンテンツが特に有用です。
 
-    FAQ        http://pukiwiki.osdn.jp/?FAQ
-    質問箱     http://pukiwiki.osdn.jp/?%E8%B3%AA%E5%95%8F%E7%AE%B1
-    続・質問箱 http://pukiwiki.osdn.jp/?%E7%B6%9A%E3%83%BB%E8%B3%AA%E5%95%8F%E7%AE%B1
+    FAQ        https://pukiwiki.osdn.jp/?FAQ
+    質問箱     https://pukiwiki.osdn.jp/?%E8%B3%AA%E5%95%8F%E7%AE%B1
 
 バグ
     PukiWikiのセキュリティに関する情報は以下でまとめられています。
-    http://pukiwiki.osdn.jp/?PukiWiki/Errata
+    https://pukiwiki.osdn.jp/?PukiWiki/Errata
 
     バグ報告は devサイトまでお願いします。
     (我々はPukiWikiでPukiWikiのバグトラッキングを行っています)
-    http://pukiwiki.osdn.jp/dev/?BugTrack2
+    https://pukiwiki.osdn.jp/dev/?BugTrack
 
 歴史
     PukiWikiは、結城浩さんが作られたYukiWikiの仕様を参考に独自に開発されまし

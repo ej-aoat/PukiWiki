@@ -1,7 +1,8 @@
 <?php
-// $Id: back.inc.php,v 1.10 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2003-2004 PukiWiki Developers Team
+// PukiWiki - Yet another WikiWikiWeb clone.
+// back.inc.php
+// Copyright
+//   2003-2018 PukiWiki Development Team
 //   2002      Katsumi Saito <katsumi@jo1upk.ymt.prug.or.jp>
 //
 // back plugin
@@ -11,7 +12,7 @@
 define('PLUGIN_BACK_ALLOW_PAGELINK', PKWK_SAFE_MODE); // FALSE(Compat), TRUE
 
 // Allow JavaScript (Compat)
-define('PLUGIN_BACK_ALLOW_JAVASCRIPT', TRUE); // TRUE(Compat), FALSE, PKWK_ALLOW_JAVASCRIPT
+define('PLUGIN_BACK_ALLOW_JAVASCRIPT', TRUE); // TRUE(Compat), FALSE
 
 // ----
 define('PLUGIN_BACK_USAGE', '#back([text],[center|left|right][,0(no hr)[,Page-or-URI-to-back]])');
@@ -42,16 +43,24 @@ function plugin_back_convert()
 	if ($href != '') {
 		if (PLUGIN_BACK_ALLOW_PAGELINK) {
 			if (is_url($href)) {
-				$href = rawurlencode($href);
+				$href = htmlsc($href);
 			} else {
+				$refer = isset($vars['page']) ? $vars['page'] : '';
 				$array = anchor_explode($href);
-				$array[0] = rawurlencode($array[0]);
-				$array[1] = ($array[1] != '') ? '#' . rawurlencode($array[1]) : '';
-				$href = $script . '?' . $array[0] .  $array[1];
-				$link = is_page($array[0]);
+				$page = get_fullname($array[0], $refer);
+				if (! is_pagename($page)) {
+					return PLUGIN_BACK_USAGE;
+				}
+				$anchor = ($array[1] != '') ? '#' . rawurlencode($array[1]) : '';
+				$href = get_page_uri($page) .  $anchor;
+				$link = is_page($page);
 			}
 		} else {
-			$href = rawurlencode($href);
+			if (is_url($href)) {
+				$href = htmlsc($href);
+			} else {
+				return PLUGIN_BACK_USAGE . ': Set a page name or an URI';
+			}
 		}
 	} else {
 		if (! PLUGIN_BACK_ALLOW_JAVASCRIPT)
@@ -70,4 +79,3 @@ function plugin_back_convert()
 			'">?</a></span> ]</div>' . "\n";
 	}
 }
-?>

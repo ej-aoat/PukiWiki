@@ -1,12 +1,12 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: rename.inc.php,v 1.38 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C) 2002-2005, 2007 PukiWiki Developers Team
+// rename.inc.php
+// Copyright 2002-2018 PukiWiki Development Team
 // License: GPL v2 or (at your option) any later version
 //
 // Rename plugin: Rename page-name and related data
 //
-// Usage: http://path/to/pukiwikiphp?plugin=rename[&refer=page_name]
+// Usage: http://path/to/index.php?plugin=rename[&refer=page_name]
 
 define('PLUGIN_RENAME_LOGPAGE', ':RenameLog');
 
@@ -22,7 +22,7 @@ function plugin_rename_action()
 		if ($src == '') return plugin_rename_phase1();
 
 		$src_pattern = '/' . preg_quote($src, '/') . '/';
-		$arr0 = preg_grep($src_pattern, get_existpages());
+		$arr0 = preg_grep($src_pattern, plugin_rename_get_existpages());
 		if (! is_array($arr0) || empty($arr0))
 			return plugin_rename_phase1('nomatch');
 
@@ -42,7 +42,7 @@ function plugin_rename_action()
 		if ($refer == '') {
 			return plugin_rename_phase1();
 
-		} else if (! is_page($refer)) {
+		} else if (! plugin_rename_is_page($refer)) {
 			return plugin_rename_phase1('notpage', $refer);
 
 		} else if ($refer === $whatsnew) {
@@ -89,8 +89,9 @@ function plugin_rename_err($err, $page = '')
 //第一段階:ページ名または正規表現の入力
 function plugin_rename_phase1($err = '', $page = '')
 {
-	global $script, $_rename_messages;
+	global $_rename_messages;
 
+	$script = get_base_uri();
 	$msg    = plugin_rename_err($err, $page);
 	$refer  = plugin_rename_getvar('refer');
 	$method = plugin_rename_getvar('method');
@@ -131,8 +132,9 @@ EOD;
 //第二段階:新しい名前の入力
 function plugin_rename_phase2($err = '')
 {
-	global $script, $_rename_messages;
+	global $_rename_messages;
 
+	$script = get_base_uri();
 	$msg   = plugin_rename_err($err);
 	$page  = plugin_rename_getvar('page');
 	$refer = plugin_rename_getvar('refer');
@@ -210,8 +212,9 @@ function plugin_rename_regex($arr_from, $arr_to)
 
 function plugin_rename_phase3($pages)
 {
-	global $script, $_rename_messages;
+	global $_rename_messages;
 
+	$script = get_base_uri();
 	$msg = $input = '';
 	$files = plugin_rename_get_files($pages);
 
@@ -320,7 +323,6 @@ function plugin_rename_get_files($pages)
 			}
 		}
 	}
-
 	return $files;
 }
 
@@ -338,11 +340,19 @@ function plugin_rename_proceed($pages, $files, $exists)
 			if (isset($exists[$page][$old]) && $exists[$page][$old])
 				unlink($new);
 			rename($old, $new);
-
-			// linkデータベースを更新する BugTrack/327 arino
-			links_update($old);
-			links_update($new);
 		}
+		// linkデータベースを更新する BugTrack/327 arino
+		$new_page = $pages[$page];
+		links_update(decode($page));
+		links_update(decode($new_page));
+	}
+	// Rename counter
+	$pages_decoded = array();
+	foreach ($pages as $old=>$new) {
+		$pages_decoded[decode($old)] = decode($new);
+	}
+	if (exist_plugin('counter')) {
+		plugin_counter_page_rename($pages_decoded);
 	}
 
 	$postdata = get_source(PLUGIN_RENAME_LOGPAGE);
@@ -378,19 +388,22 @@ function plugin_rename_proceed($pages, $files, $exists)
 	// ファイルの書き込み
 	page_write(PLUGIN_RENAME_LOGPAGE, join('', $postdata));
 
+	// Refresh RecentChanges / Delete cache/recent.dat
+	delete_recent_changes_cache();
+
 	//リダイレクト
 	$page = plugin_rename_getvar('page');
 	if ($page == '') $page = PLUGIN_RENAME_LOGPAGE;
 
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . pagename_urlencode($page));
+	header('Location: ' . get_page_uri($page, PKWK_URI_ROOT));
 	exit;
 }
 
 function plugin_rename_getrelated($page)
 {
 	$related = array();
-	$pages = get_existpages();
+	$pages = plugin_rename_get_existpages();
 	$pattern = '/(?:^|\/)' . preg_quote(strip_bracket($page), '/') . '(?:\/|$)/';
 	foreach ($pages as $name) {
 		if ($name === $page) continue;
@@ -404,7 +417,7 @@ function plugin_rename_getselecttag($page)
 	global $whatsnew;
 
 	$pages = array();
-	foreach (get_existpages() as $_page) {
+	foreach (plugin_rename_get_existpages() as $_page) {
 		if ($_page === $whatsnew) continue;
 
 		$selected = ($_page === $page) ? ' selected' : '';
@@ -424,3 +437,50 @@ EOD;
 
 }
 
+/**
+ * List exist pages and deleted pages
+ */
+function plugin_rename_get_existpages() {
+	$list1 = array_values(get_existpages());
+	$list2 = array_values(get_existpages(DIFF_DIR, '.txt'));
+	$list3 = array_values(get_existpages(BACKUP_DIR, '.txt'));
+	$list4 = array_values(get_existpages(BACKUP_DIR, '.gz'));
+	$list5 = array_values(get_existpages(COUNTER_DIR, '.count'));
+	$wholelist = array_merge($list1, $list2, $list3, $list4, $list5);
+	$list = array_unique($wholelist);
+	return $list;
+}
+
+/**
+ * Return where the page exists or existed
+ */
+function plugin_rename_is_page($page) {
+	$enc = encode($page);
+	if (is_page($page)) {
+		return true;
+	}
+	if (file_exists(DIFF_DIR . $enc . '.txt')) {
+		return true;
+	}
+	if (file_exists(BACKUP_DIR . $enc . '.txt')) {
+		return true;
+	}
+	if (file_exists(BACKUP_DIR . $enc . '.gz')) {
+		return true;
+	}
+	if (file_exists(COUNTER_DIR . $enc . '.count')) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Setup initial pages (:RenameLog)
+ */
+function plugin_rename_setup_initial_pages() {
+	if (!is_page(PLUGIN_RENAME_LOGPAGE)) {
+		// Create :RenameLog
+		$body = "#freeze\n// :RenameLog (rename plugin)\n";
+		page_write(PLUGIN_RENAME_LOGPAGE, $body);
+	}
+}

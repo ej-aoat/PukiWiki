@@ -1,14 +1,15 @@
 <?php
-/////////////////////////////////////////////////
 // PukiWiki - Yet another WikiWikiWeb clone.
+// menu.inc.php
+// Copyright 2003-2018 PukiWiki Development Team
+// License: GPL v2 or (at your option) any later version
 //
-// $Id: menu.inc.php,v 1.10 2011/01/25 15:01:01 henoheno Exp $
-//
+// Menu plugin
 
-// サブメニューを使用する
+// Use Submenu if true
 define('MENU_ENABLE_SUBMENU', FALSE);
 
-// サブメニューの名称
+// Name of Submenu
 define('MENU_SUBMENUBAR', 'MenuBar');
 
 function plugin_menu_convert()
@@ -49,12 +50,12 @@ function plugin_menu_convert()
 			return '';
 		} else if ($vars['page'] === $page) {
 			return '<!-- #menu(): You already view ' . htmlsc($page) . ' -->';
+		} else if (!is_page_readable($page)) {
+			return '#menu(): ' . htmlsc($page) . ' is not readable';
 		} else {
 			// Cut fixed anchors
 			$menutext = preg_replace('/^(\*{1,3}.*)\[#[A-Za-z][\w-]+\](.*)$/m', '$1$2', get_source($page));
-
-			return preg_replace('/<ul[^>]*>/', '<ul>', convert_html($menutext));  
+			return convert_html($menutext);
 		}
 	}
 }
-?>

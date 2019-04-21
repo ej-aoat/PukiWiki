@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone
 // attach.inc.php
 // Copyright
-//   2003-2016 PukiWiki Development Team
+//   2003-2017 PukiWiki Development Team
 //   2002-2003 PANDA <panda@arino.jp> http://home.arino.jp/
 //   2002      Y.MASUI <masui@hisec.co.jp> http://masui.net/pukiwiki/
 //   2001-2002 Originally written by yu-ji
@@ -95,6 +95,9 @@ function plugin_attach_action()
 	$pass  = isset($vars['pass'])  ? $vars['pass']  : NULL;
 	$page  = isset($vars['page'])  ? $vars['page']  : '';
 
+	if ($refer === '' && $page !== '') {
+		$refer = $page;
+	}
 	if ($refer != '' && is_pagename($refer)) {
 		if(in_array($pcmd, array('info', 'open', 'list'))) {
 			check_readable($refer);
@@ -203,13 +206,11 @@ function attach_upload($file, $page, $pass = NULL)
 
 	if ($notify) {
 		$footer['ACTION']   = 'File attached';
-		$footer['FILENAME'] = & $file['name'];
-		$footer['FILESIZE'] = & $file['size'];
-		$footer['PAGE']     = & $page;
+		$footer['FILENAME'] = $file['name'];
+		$footer['FILESIZE'] = $file['size'];
+		$footer['PAGE']     = $page;
 
-		$footer['URI']      = get_script_uri() .
-			//'?' . pagename_urlencode($page);
-
+		$footer['URI']      = get_base_uri(PKWK_URI_ABSOLUTE) .
 			// MD5 may heavy
 			'?plugin=attach' .
 				'&refer=' . rawurlencode($page) .
@@ -339,7 +340,6 @@ function attach_showform()
 	$page = isset($vars['page']) ? $vars['page'] : '';
 	$vars['refer'] = $page;
 	$body = attach_form($page);
-
 	return array('msg'=>$_attach_messages['msg_upload'], 'body'=>$body);
 }
 
@@ -380,8 +380,9 @@ function attach_mime_content_type($filename, $displayname)
 // アップロードフォームの出力
 function attach_form($page)
 {
-	global $script, $vars, $_attach_messages;
+	global $vars, $_attach_messages;
 
+	$script = get_base_uri();
 	$r_page = rawurlencode($page);
 	$s_page = htmlsc($page);
 	$navi = <<<EOD
@@ -433,6 +434,10 @@ class AttachFile
 	var $status = array('count'=>array(0), 'age'=>'', 'pass'=>'', 'freeze'=>FALSE);
 
 	function AttachFile($page, $file, $age = 0)
+	{
+		$this->__construct($page, $file, $age);
+	}
+	function __construct($page, $file, $age = 0)
 	{
 		$this->page = $page;
 		$this->file = preg_replace('#^.*/#','',$file);
@@ -492,8 +497,9 @@ class AttachFile
 
 	function toString($showicon, $showinfo)
 	{
-		global $script, $_attach_messages;
+		global $_attach_messages;
 
+		$script = get_base_uri();
 		$this->getstatus();
 		$param  = '&amp;file=' . rawurlencode($this->file) . '&amp;refer=' . rawurlencode($this->page) .
 			($this->age ? '&amp;age=' . $this->age : '');
@@ -515,8 +521,9 @@ class AttachFile
 	// 情報表示
 	function info($err)
 	{
-		global $script, $_attach_messages;
+		global $_attach_messages;
 
+		$script = get_base_uri();
 		$r_page = rawurlencode($this->page);
 		$s_page = htmlsc($this->page);
 		$s_file = htmlsc($this->file);
@@ -638,10 +645,9 @@ EOD;
 
 		if ($notify) {
 			$footer['ACTION']   = 'File deleted';
-			$footer['FILENAME'] = & $this->file;
-			$footer['PAGE']     = & $this->page;
-			$footer['URI']      = get_script_uri() .
-				'?' . pagename_urlencode($this->page);
+			$footer['FILENAME'] = $this->file;
+			$footer['PAGE']     = $this->page;
+			$footer['URI']      = get_page_uri($this->page, PKWK_URI_ABSOLUTE);
 			$footer['USER_AGENT']  = TRUE;
 			$footer['REMOTE_ADDR'] = TRUE;
 			pkwk_mail_notify($notify_subject, "\n", $footer) or
@@ -742,7 +748,11 @@ EOD;
 			. '"; filename*=utf-8\'\'' . rawurlencode($utf8filename));
 		header('Content-Length: ' . $this->size);
 		header('Content-Type: '   . $this->type);
-
+		// Disable output bufferring
+		while (ob_get_level()) {
+			ob_end_flush();
+		}
+		flush();
 		@readfile($this->filename);
 		exit;
 	}
@@ -755,6 +765,10 @@ class AttachFiles
 	var $files = array();
 
 	function AttachFiles($page)
+	{
+		$this->__construct($page);
+	}
+	function __construct($page)
 	{
 		$this->page = $page;
 	}
@@ -824,6 +838,10 @@ class AttachPages
 	var $pages = array();
 
 	function AttachPages($page = '', $age = NULL)
+	{
+		$this->__construct($page, $age);
+	}
+	function __construct($page = '', $age = NULL)
 	{
 
 		$dir = opendir(UPLOAD_DIR) or

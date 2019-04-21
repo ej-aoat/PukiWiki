@@ -1,12 +1,105 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: func.php,v 1.104 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+// func.php
+// Copyright
+//   2002-2019 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
 // General functions
+
+// URI type enum
+/** Relative path. */
+define('PKWK_URI_RELATIVE', 0);
+/** Root relative URI. */
+define('PKWK_URI_ROOT', 1);
+/** Absolute URI. */
+define('PKWK_URI_ABSOLUTE', 2);
+
+function pkwk_log($message)
+{
+	$log_filepath = 'log/error.log.php';
+	static $dateTimeExists;
+	if (!isset($dateTimeExists)) {
+		$dateTimeExists = class_exists('DateTime');
+		error_log("<?php\n", 3, $log_filepath);
+	}
+	if ($dateTimeExists) {
+		// for PHP5.2+
+		$d = \DateTime::createFromFormat('U.u', sprintf('%6F', microtime(true)));
+		$timestamp = substr($d->format('Y-m-d H:i:s.u'), 0, 23);
+	} else {
+		$timestamp = date('Y-m-d H:i:s');
+	}
+	error_log($timestamp . ' ' . $message . "\n", 3, $log_filepath);
+}
+
+/*
+ * Get LTSV safe string - Remove tab and newline chars.
+ *
+ * @param $s target string
+ */
+function get_ltsv_value($s) {
+	if (!$s) {
+		return '';
+	}
+	return preg_replace('#[\t\r\n]#', '', $s);
+}
+
+/**
+ * Write update_log on updating contents.
+ *
+ * @param $page page name
+ * @param $diff_content diff expression
+ */
+function pkwk_log_updates($page, $diff_content) {
+	global $auth_user, $logging_updates, $logging_updates_log_dir;
+	$log_dir = $logging_updates_log_dir;
+	$timestamp = time();
+	$ymd = gmdate('Ymd', $timestamp);
+	$difflog_file = $log_dir . '/diff.' . $ymd . '.log';
+	$ltsv_file = $log_dir . '/update.' . $ymd . '.log';
+	$d = array(
+		'time' => gmdate('Y-m-d H:i:s', $timestamp),
+		'uri' => $_SERVER['REQUEST_URI'],
+		'method' => $_SERVER['REQUEST_METHOD'],
+		'remote_addr' => $_SERVER['REMOTE_ADDR'],
+		'user_agent' => $_SERVER['HTTP_USER_AGENT'],
+		'page' => $page,
+		'user' => $auth_user,
+		'diff' => $diff_content
+	);
+	if (file_exists($log_dir) && defined('JSON_UNESCAPED_UNICODE')) {
+		// require: PHP5.4+
+		$line = json_encode($d, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . "\n";
+		file_put_contents($difflog_file, $line, FILE_APPEND | LOCK_EX);
+		$keys = array('time', 'uri', 'method', 'remote_addr', 'user_agent',
+			'page', 'user');
+		$ar2 = array();
+		foreach ($keys as $k) {
+			$ar2[] = $k . ':' . get_ltsv_value($d[$k]);
+		}
+		$ltsv = join($ar2, "\t") . "\n";
+		file_put_contents($ltsv_file, $ltsv, FILE_APPEND | LOCK_EX);
+	}
+}
+
+/**
+ * ctype_digit that supports PHP4+.
+ *
+ * PHP official document says PHP4 has ctype_digit() function.
+ * But sometimes it doen't exists on PHP 4.1.
+ */
+function pkwk_ctype_digit($s) {
+	static $ctype_digit_exists;
+	if (!isset($ctype_digit_exists)) {
+		$ctype_digit_exists = function_exists('ctype_digit');
+	}
+	if ($ctype_digit_exists) {
+		return ctype_digit($s);
+	}
+	return preg_match('/^[0-9]+$/', $s) ? true : false;
+}
 
 function is_interwiki($str)
 {
@@ -83,11 +176,10 @@ function is_freeze($page, $clearcache = FALSE)
 			die('is_freeze(): fopen() failed: ' . htmlsc($page));
 		flock($fp, LOCK_SH) or die('is_freeze(): flock() failed');
 		rewind($fp);
-		$buffer = fgets($fp, 9);
+		$buffer = fread($fp, 1000);
 		flock($fp, LOCK_UN) or die('is_freeze(): flock() failed');
 		fclose($fp) or die('is_freeze(): fclose() failed: ' . htmlsc($page));
-
-		$is_freeze[$page] = ($buffer != FALSE && rtrim($buffer, "\r\n") == '#freeze');
+		$is_freeze[$page] = (bool) preg_match('/^#freeze$/m', $buffer);
 		return $is_freeze[$page];
 	}
 }
@@ -138,6 +230,13 @@ function auto_template($page)
 	return $body;
 }
 
+function _mb_convert_kana__enable($str, $option) {
+	return mb_convert_kana($str, $option, SOURCE_ENCODING);
+}
+function _mb_convert_kana__none($str, $option) {
+	return $str;
+}
+
 // Expand all search-words to regexes and push them into an array
 function get_search_words($words = array(), $do_escape = FALSE)
 {
@@ -146,11 +245,9 @@ function get_search_words($words = array(), $do_escape = FALSE)
 	if (! isset($init)) {
 		// function: mb_convert_kana() is for Japanese code only
 		if (LANG == 'ja' && function_exists('mb_convert_kana')) {
-			$mb_convert_kana = create_function('$str, $option',
-				'return mb_convert_kana($str, $option, SOURCE_ENCODING);');
+			$mb_convert_kana = '_mb_convert_kana__enable';
 		} else {
-			$mb_convert_kana = create_function('$str, $option',
-				'return $str;');
+			$mb_convert_kana = '_mb_convert_kana__none';
 		}
 		if (SOURCE_ENCODING == 'EUC-JP') {
 			// Perl memo - Correct pattern-matching with EUC-JP
@@ -206,10 +303,78 @@ function get_search_words($words = array(), $do_escape = FALSE)
 	return $regex; // For all words
 }
 
+function get_passage_date_html_span($date_atom)
+{
+	return '<span class="page_passage" data-mtime="' . $date_atom . '"></span>';
+}
+
+function get_passage_mtime_html_span($mtime)
+{
+	$date_atom = get_date_atom($mtime);
+	return get_passage_date_html_span($date_atom);
+}
+
+/**
+ * Get passage span html
+ *
+ * @param $page
+ */
+function get_passage_html_span($page)
+{
+	$date_atom = get_page_date_atom($page);
+	return get_passage_date_html_span($date_atom);
+}
+
+function get_link_passage_class() {
+	return 'link_page_passage';
+}
+
+/**
+ * Get page link general attributes
+ * @param $page
+ * @return array('data_mtime' => page mtime or null, 'class' => additinal classes)
+ */
+function get_page_link_a_attrs($page)
+{
+	global $show_passage;
+	if ($show_passage) {
+		$pagemtime = get_page_date_atom($page);
+		return array(
+			'data_mtime' => $pagemtime,
+			'class' => get_link_passage_class(),
+		);
+	}
+	return array(
+		'data_mtime' => '',
+		'class' => ''
+	);
+}
+
+/**
+ * Get page link general attributes from filetime
+ * @param $filetime
+ * @return array('data_mtime' => page mtime or null, 'class' => additinal classes)
+ */
+function get_filetime_a_attrs($filetime)
+{
+	global $show_passage;
+	if ($show_passage) {
+		$pagemtime = get_date_atom($filetime + LOCALZONE);
+		return array(
+			'data_mtime' => $pagemtime,
+			'class' => get_link_passage_class(),
+		);
+	}
+	return array(
+		'data_mtime' => '',
+		'class' => ''
+	);
+}
+
 // 'Search' main function
 function do_search($word, $type = 'AND', $non_format = FALSE, $base = '')
 {
-	global $script, $whatsnew, $non_list, $search_non_list;
+	global $whatsnew, $non_list, $search_non_list;
 	global $_msg_andresult, $_msg_orresult, $_msg_notfoundresult;
 	global $search_auth, $show_passage;
 
@@ -249,11 +414,13 @@ function do_search($word, $type = 'AND', $non_format = FALSE, $base = '')
 		if ($search_auth && ! check_readable($page, false, false)) {
 			unset($pages[$page]);
 			--$count;
+			continue;
 		}
 
 		// Search for page contents
 		foreach ($keys as $key) {
-			$b_match = preg_match($key, get_source($page, TRUE, TRUE));
+			$body = get_source($page, TRUE, TRUE, TRUE);
+			$b_match = preg_match($key, remove_author_header($body));
 			if ($b_type xor $b_match) break; // OR
 		}
 		if ($b_match) continue;
@@ -265,7 +432,7 @@ function do_search($word, $type = 'AND', $non_format = FALSE, $base = '')
 	$r_word = rawurlencode($word);
 	$s_word = htmlsc($word);
 	if (empty($pages))
-		return str_replace('$1', $s_word, $_msg_notfoundresult);
+		return str_replace('$1', $s_word, str_replace('$3', $count, $_msg_notfoundresult));
 
 	ksort($pages, SORT_STRING);
 
@@ -273,8 +440,8 @@ function do_search($word, $type = 'AND', $non_format = FALSE, $base = '')
 	foreach (array_keys($pages) as $page) {
 		$r_page  = rawurlencode($page);
 		$s_page  = htmlsc($page);
-		$passage = $show_passage ? ' ' . get_passage(get_filetime($page)) : '';
-		$retval .= ' <li><a href="' . $script . '?cmd=read&amp;page=' .
+		$passage = $show_passage ? ' ' . get_passage_html_span($page) : '';
+		$retval .= ' <li><a href="' . get_base_uri() . '?cmd=read&amp;page=' .
 			$r_page . '&amp;word=' . $r_word . '">' . $s_page .
 			'</a>' . $passage . '</li>' . "\n";
 	}
@@ -295,7 +462,7 @@ function arg_check($str)
 
 function _pagename_urlencode_callback($matches)
 {
-	return rawurlencode($matches[0]);
+	return urlencode($matches[0]);
 }
 
 function pagename_urlencode($page)
@@ -341,9 +508,11 @@ function strip_bracket($str)
 // Create list of pages
 function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 {
-	global $script, $list_index;
+	global $list_index;
 	global $_msg_symbol, $_msg_other;
 	global $pagereading_enable;
+
+	$script = get_base_uri();
 
 	// ソートキーを決定する。 ' ' < '[a-zA-Z]' < 'zz'という前提。
 	$symbol = ' ';
@@ -364,15 +533,12 @@ function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 	} else {
 		$href = $script . '?cmd=' . $cmd . '&amp;page=';
 	}
-
+	uasort($pages, 'strnatcmp');
 	foreach($pages as $file=>$page) {
 		$r_page  = pagename_urlencode($page);
 		$s_page  = htmlsc($page, ENT_QUOTES);
-		$passage = get_pg_passage($page);
-
 		$str = '   <li><a href="' . $href . $r_page . '">' .
-			$s_page . '</a>' . $passage;
-
+			$s_page . '</a> ' . get_pg_passage($page);
 		if ($withfilename) {
 			$s_file = htmlsc($file);
 			$str .= "\n" . '    <ul><li>' . $s_file . '</li></ul>' .
@@ -383,7 +549,7 @@ function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 		// WARNING: Japanese code hard-wired
 		if($pagereading_enable) {
 			if(mb_ereg('^([A-Za-z])', mb_convert_kana($page, 'a'), $matches)) {
-				$head = $matches[1];
+				$head = strtoupper($matches[1]);
 			} elseif (isset($readings[$page]) && mb_ereg('^([ァ-ヶ])', $readings[$page], $matches)) { // here
 				$head = $matches[1];
 			} elseif (mb_ereg('^[ -~]|[^ぁ-ん亜-熙]', $page)) { // and here
@@ -392,18 +558,17 @@ function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 				$head = $other;
 			}
 		} else {
-			$head = (preg_match('/^([A-Za-z])/', $page, $matches)) ? $matches[1] :
+			$head = (preg_match('/^([A-Za-z])/', $page, $matches)) ? strtoupper($matches[1]) :
 				(preg_match('/^([ -~])/', $page) ? $symbol : $other);
 		}
-
 		$list[$head][$page] = $str;
 	}
-	ksort($list, SORT_STRING);
+	uksort($list, 'strnatcmp');
 
 	$cnt = 0;
 	$arr_index = array();
 	$retval .= '<ul>' . "\n";
-	foreach ($list as $head=>$pages) {
+	foreach ($list as $head=>$sub_pages) {
 		if ($head === $symbol) {
 			$head = $_msg_symbol;
 		} else if ($head === $other) {
@@ -419,8 +584,7 @@ function page_list($pages, $cmd = 'read', $withfilename = FALSE)
 				'"><strong>' . $head . '</strong></a>' . "\n" .
 				'  <ul>' . "\n";
 		}
-		ksort($pages, SORT_STRING);
-		$retval .= join("\n", $pages);
+		$retval .= join("\n", $sub_pages);
 		if ($list_index)
 			$retval .= "\n  </ul>\n </li>\n";
 	}
@@ -462,13 +626,17 @@ EOD;
 	if(defined('SKIN_FILE') && file_exists(SKIN_FILE) && is_readable(SKIN_FILE)) {
 		catbody($title, $page, $body);
 	} else {
-		header('Content-Type: text/html; charset=euc-jp');
+		$charset = 'utf-8';
+		if(defined('CONTENT_CHARSET')) {
+			$charset = CONTENT_CHARSET;
+		}
+		header("Content-Type: text/html; charset=$charset");
 		print <<<EOD
-<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<!DOCTYPE html>
 <html>
  <head>
+  <meta http-equiv="content-type" content="text/html; charset=$charset">
   <title>$title</title>
-  <meta http-equiv="content-type" content="text/html; charset=euc-jp">
  </head>
  <body>
  $body
@@ -519,6 +687,18 @@ function format_date($val, $paren = FALSE)
 	return $paren ? '(' . $date . ')' : $date;
 }
 
+/**
+ * Format date in DATE_ATOM format.
+ */
+function get_date_atom($timestamp)
+{
+	// Compatible with DATE_ATOM format
+	// return date(DATE_ATOM, $timestamp);
+	$zmin = abs(LOCALZONE / 60);
+	return date('Y-m-d\TH:i:s', $timestamp) . sprintf('%s%02d:%02d',
+		(LOCALZONE < 0 ? '-' : '+') , $zmin / 60, $zmin % 60);
+}
+
 // Get short string of the passage, 'N seconds/minutes/hours/days/years ago'
 function get_passage($time, $paren = TRUE)
 {
@@ -560,7 +740,7 @@ function get_autolink_pattern(& $pages)
 			$auto_pages[] = $page;
 
 	if (empty($auto_pages)) {
-		$result = $result_a = $nowikiname ? '(?!)' : $WikiName;
+		$result = $result_a = '(?!)';
 	} else {
 		$auto_pages = array_unique($auto_pages);
 		sort($auto_pages, SORT_STRING);
@@ -603,60 +783,201 @@ function get_autolink_pattern_sub(& $pages, $start, $end, $pos)
 	return $result;
 }
 
+/**
+ * Get propery URI of this script
+ *
+ * @param $uri_type relative or absolute option
+ *        PKWK_URI_RELATIVE, PKWK_URI_ROOT or PKWK_URI_ABSOLUTE
+ */
+function get_base_uri($uri_type = PKWK_URI_RELATIVE)
+{
+	$base_type = pkwk_base_uri_type_stack_peek();
+	$type = max($base_type, $uri_type);
+	switch ($type) {
+	case PKWK_URI_RELATIVE:
+		return pkwk_script_uri_base(PKWK_URI_RELATIVE);
+	case PKWK_URI_ROOT:
+		return pkwk_script_uri_base(PKWK_URI_ROOT);
+	case PKWK_URI_ABSOLUTE:
+		return pkwk_script_uri_base(PKWK_URI_ABSOLUTE);
+	default:
+		die_message('Invalid uri_type in get_base_uri()');
+	}
+}
+
+/**
+ * Get URI of the page
+ *
+ * @param page page name
+ * @param $uri_type relative or absolute option
+ *        PKWK_URI_RELATIVE, PKWK_URI_ROOT or PKWK_URI_ABSOLUTE
+ */
+function get_page_uri($page, $uri_type = PKWK_URI_RELATIVE)
+{
+	global $defaultpage;
+	if ($page === $defaultpage) {
+		return get_base_uri($uri_type);
+	}
+	return get_base_uri($uri_type) . '?' . pagename_urlencode($page);
+}
+
 // Get absolute-URI of this script
-function get_script_uri($init_uri = '')
+function get_script_uri()
+{
+	return get_base_uri(PKWK_URI_ABSOLUTE);
+}
+
+/**
+ * Get or initialize Script URI
+ *
+ * @param $uri_type relative or absolute potion
+ *        PKWK_URI_RELATIVE, PKWK_URI_ROOT or PKWK_URI_ABSOLUTE
+ * @param $initialize true if you initialize URI
+ * @param $uri_set URI set manually
+ */
+function pkwk_script_uri_base($uri_type, $initialize = null, $uri_set = null)
 {
 	global $script_directory_index;
-	static $script;
-
-	if ($init_uri == '') {
-		// Get
-		if (isset($script)) return $script;
-
-		// Set automatically
-		$msg     = 'get_script_uri() failed: Please set $script at INI_FILE manually';
-
-		$script  = (SERVER_PORT == 443 ? 'https://' : 'http://'); // scheme
-		$script .= SERVER_NAME;	// host
-		$script .= (SERVER_PORT == 80 ? '' : ':' . SERVER_PORT);  // port
-
-		// SCRIPT_NAME が'/'で始まっていない場合(cgiなど) REQUEST_URIを使ってみる
-		$path    = SCRIPT_NAME;
-		if ($path{0} != '/') {
-			if (! isset($_SERVER['REQUEST_URI']) || $_SERVER['REQUEST_URI']{0} != '/')
-				die_message($msg);
-
-			// REQUEST_URIをパースし、path部分だけを取り出す
-			$parse_url = parse_url($script . $_SERVER['REQUEST_URI']);
-			if (! isset($parse_url['path']) || $parse_url['path']{0} != '/')
-				die_message($msg);
-
-			$path = $parse_url['path'];
+	static $initialized = false;
+	static $uri_absolute, $uri_root, $uri_relative;
+	if (! $initialized) {
+		if (isset($initialize) && $initialize) {
+			if (isset($uri_set)) {
+				$uri_absolute = $uri_set;
+			} else {
+				$uri_absolute = guess_script_absolute_uri();
+			}
+			// Support $script_directory_index (cut 'index.php')
+			if (isset($script_directory_index)) {
+				$slash_index = '/' . $script_directory_index;
+				$len = strlen($slash_index);
+				if (substr($uri_absolute,  -1 * $len) === $slash_index) {
+					$uri_absolute = substr($uri_absolute, 0, strlen($uri_absolute) - $len + 1);
+				}
+			}
+			$elements = parse_url($uri_absolute);
+			$uri_root = $elements['path'];
+			if (substr($uri_root, -1) === '/') {
+				$uri_relative = './';
+			} else {
+				$pos = mb_strrpos($uri_root, '/');
+				if ($pos >= 0) {
+					$uri_relative = substr($uri_root, $pos + 1);
+				} else {
+					$uri_relative = $uri_root;
+				}
+			}
+			$initialized = true;
+		} else {
+			die_message('Script URI must be initialized in pkwk_script_uri_base()');
 		}
-		$script .= $path;
+	}
+	switch ($uri_type) {
+	case PKWK_URI_RELATIVE:
+		return $uri_relative;
+	case PKWK_URI_ROOT:
+		return $uri_root;
+	case PKWK_URI_ABSOLUTE:
+		return $uri_absolute;
+	default:
+		die_message('Invalid uri_type in pkwk_script_uri_base()');
+	}
+}
 
-		if (! is_url($script, TRUE) && php_sapi_name() == 'cgi')
-			die_message($msg);
-		unset($msg);
+/**
+ * Create uri_type context
+ *
+ * @param $uri_type relative or absolute option
+ *        PKWK_URI_RELATIVE, PKWK_URI_ROOT or PKWK_URI_ABSOLUTE
+ */
+function pkwk_base_uri_type_stack_push($uri_type)
+{
+	_pkwk_base_uri_type_stack(false, true, $uri_type);
+}
 
+/**
+ * Stop current active uri_type context
+ */
+function pkwk_base_uri_type_stack_pop()
+{
+	_pkwk_base_uri_type_stack(false, false);
+}
+
+/**
+ * Get current active uri_type status
+ */
+function pkwk_base_uri_type_stack_peek()
+{
+	$type = _pkwk_base_uri_type_stack(true, false);
+	if (is_null($type)) {
+		return PKWK_URI_RELATIVE;
+	} elseif ($type === PKWK_URI_ABSOLUTE) {
+		return PKWK_URI_ABSOLUTE;
+	} elseif ($type === PKWK_URI_ROOT) {
+		return PKWK_URI_ROOT;
 	} else {
-		// Set manually
-		if (isset($script)) die_message('$script: Already init');
-		if (! is_url($init_uri, TRUE)) die_message('$script: Invalid URI');
-		$script = $init_uri;
+		return PKWK_URI_RELATIVE;
 	}
+}
 
-	// Cut filename or not
-	if (isset($script_directory_index)) {
-		if (! file_exists($script_directory_index))
-			die_message('Directory index file not found: ' .
-				htmlsc($script_directory_index));
-		$matches = array();
-		if (preg_match('#^(.+/)' . preg_quote($script_directory_index, '#') . '$#',
-			$script, $matches)) $script = $matches[1];
+/**
+ * uri_type context internal function
+ *
+ * @param $peek is peek action or not
+ * @param $push push(true) or pop(false) on not peeking
+ * @param $uri_type uri_type on push and non-peeking
+ * @return $uri_type uri_type for peeking
+ */
+function _pkwk_base_uri_type_stack($peek, $push, $uri_type = null)
+{
+	static $uri_types = array();
+	if ($peek) {
+		// Peek: get latest value
+		if (count($uri_types) === 0) {
+			return null;
+		} else {
+			return $uri_types[0];
+		}
+	} else {
+		if ($push) {
+			// Push $uri_type
+			if (count($uri_types) === 0) {
+				array_unshift($uri_types, $uri_type);
+			} else {
+				$prev_type = $uri_types[0];
+				if ($uri_type >= $prev_type) {
+					array_unshift($uri_types, $uri_type);
+				} else {
+					array_unshift($uri_types, $prev_type);
+				}
+			}
+		} else {
+			// Pop $uri_type
+			return array_shift($uri_types);
+		}
 	}
+}
 
-	return $script;
+/**
+ * Guess Script Absolute URI.
+ *
+ * SERVER_PORT: $_SERVER['SERVER_PORT'] converted in init.php
+ * SERVER_NAME: $_SERVER['SERVER_NAME'] converted in init.php
+ */
+function guess_script_absolute_uri()
+{
+	$port = SERVER_PORT;
+	$is_ssl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ||
+		(isset($_SERVER['REQUEST_SCHEME']) && $_SERVER['REQUEST_SCHEME'] === 'https');
+	if ($is_ssl) {
+		$host = 'https://' . SERVER_NAME .
+			($port == 443 ? '' : ':' . $port);
+	} else {
+		$host = 'http://' . SERVER_NAME .
+			($port == 80 ? '' : ':' . $port);
+	}
+	$uri_elements = parse_url($host . $_SERVER['REQUEST_URI']);
+	return $host . $uri_elements['path'];
 }
 
 // Remove null(\0) bytes from variables
@@ -726,6 +1047,70 @@ function htmlsc($string = '', $flags = ENT_COMPAT, $charset = CONTENT_CHARSET)
 	return htmlspecialchars($string, $flags, $charset);	// htmlsc()
 }
 
+/**
+ * Get JSON string with htmlspecialchars().
+ */
+function htmlsc_json($obj)
+{
+	// json_encode: PHP 5.2+
+	// JSON_UNESCAPED_UNICODE: PHP 5.4+
+	// JSON_UNESCAPED_SLASHES: PHP 5.4+
+	if (defined('JSON_UNESCAPED_UNICODE')) {
+		return htmlsc(json_encode($obj,
+			JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+	}
+	return '';
+}
+
+/**
+ * Get redirect page name on Page Redirect Rules
+ *
+ * This function returns exactly false if it doesn't need redirection.
+ * So callers need check return value is false or not.
+ *
+ * @param $page page name
+ * @return new page name or false
+ */
+function get_pagename_on_redirect($page) {
+	global $page_redirect_rules;
+	foreach ($page_redirect_rules as $rule=>$replace) {
+		if (preg_match($rule, $page)) {
+			if (is_string($replace)) {
+				$new_page = preg_replace($rule, $replace, $page);
+			} elseif (is_object($replace) && is_callable($replace)) {
+				$new_page = preg_replace_callback($rule, $replace, $page);
+			} else {
+				die_message('Invalid redirect rule: ' . $rule . '=>' . $replace);
+			}
+			if ($page !== $new_page) {
+				return $new_page;
+			}
+		}
+	}
+	return false;
+}
+
+/**
+ * Redirect from an old page to new page
+ *
+ * This function returns true when a redirection occurs.
+ * So callers need check return value is false or true.
+ * And if it is true, then you have to exit PHP script.
+ *
+ * @return bool Inticates a redirection occurred or not
+ */
+function manage_page_redirect() {
+	global $vars;
+	if (isset($vars['page'])) {
+		$page = $vars['page'];
+	}
+	$new_page = get_pagename_on_redirect($page);
+	if ($new_page != false) {
+		header('Location: ' . get_page_uri($new_page, PKWK_URI_ROOT));
+		return TRUE;
+	}
+	return FALSE;
+}
 
 //// Compat ////
 
@@ -784,4 +1169,3 @@ if (! function_exists('sha1')) {
 		}
 	}
 }
-

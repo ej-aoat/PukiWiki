@@ -1,7 +1,7 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: auth.php,v 1.22 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C) 2003-2005, 2007 PukiWiki Developers Team
+// auth.php
+// Copyright 2003-2018 PukiWiki Development Team
 // License: GPL v2 or (at your option) any later version
 //
 // Authentication related functions
@@ -18,6 +18,7 @@ define('AUTH_TYPE_FORM', 3);
 
 define('AUTH_TYPE_EXTERNAL_REMOTE_USER', 4);
 define('AUTH_TYPE_EXTERNAL_X_FORWARDED_USER', 5);
+define('AUTH_TYPE_SAML', 6);
 
 
 // Passwd-auth related ----
@@ -50,8 +51,8 @@ function pkwk_hash_compute($phrase = '', $scheme = '{x-php-md5}', $prefix = TRUE
 	// With a {scheme}salt or not
 	$matches = array();
 	if (preg_match('/^(\{.+\})(.*)$/', $scheme, $matches)) {
-		$scheme = & $matches[1];
-		$salt   = & $matches[2];
+		$scheme = $matches[1];
+		$salt   = $matches[2];
 	} else if ($scheme != '') {
 		$scheme  = ''; // Cleartext
 		$salt    = '';
@@ -76,6 +77,24 @@ function pkwk_hash_compute($phrase = '', $scheme = '{x-php-md5}', $prefix = TRUE
 	case '{x-php-sha1}'  :
 		$hash = ($prefix ? ($canonical ? '{x-php-sha1}' : $scheme) : '') .
 			sha1($phrase);
+		break;
+
+	// PHP sha256
+	case '{x-php-sha256}'  :
+		$hash = ($prefix ? ($canonical ? '{x-php-sha256}' : $scheme) : '') .
+			hash('sha256', $phrase);
+		break;
+
+	// PHP sha384
+	case '{x-php-sha384}'  :
+		$hash = ($prefix ? ($canonical ? '{x-php-sha384}' : $scheme) : '') .
+			hash('sha384', $phrase);
+		break;
+
+	// PHP sha512
+	case '{x-php-sha512}'  :
+		$hash = ($prefix ? ($canonical ? '{x-php-sha512}' : $scheme) : '') .
+			hash('sha512', $phrase);
 		break;
 
 	// LDAP CRYPT
@@ -110,6 +129,48 @@ function pkwk_hash_compute($phrase = '', $scheme = '{x-php-md5}', $prefix = TRUE
 		$salt = ($salt != '' ? substr(base64_decode($salt), 20) : substr(crypt(''), -8));
 		$hash = ($prefix ? ($canonical ? '{SSHA}' : $scheme) : '') .
 			base64_encode(pkwk_hex2bin(sha1($phrase . $salt)) . $salt);
+		break;
+
+	// LDAP SHA256
+	case '{sha256}'        :
+		$hash = ($prefix ? ($canonical ? '{SHA256}' : $scheme) : '') .
+			base64_encode(hash('sha256', $phrase, TRUE));
+		break;
+
+	// LDAP SSHA256
+	case '{ssha256}'        :
+		// SHA-2 SHA-256 Key length = 256bits = 32bytes
+		$salt = ($salt != '' ? substr(base64_decode($salt), 32) : substr(crypt(''), -8));
+		$hash = ($prefix ? ($canonical ? '{SSHA256}' : $scheme) : '') .
+			base64_encode(hash('sha256', $phrase . $salt, TRUE) . $salt);
+		break;
+
+	// LDAP SHA384
+	case '{sha384}'        :
+		$hash = ($prefix ? ($canonical ? '{SHA384}' : $scheme) : '') .
+			base64_encode(hash('sha384', $phrase, TRUE));
+		break;
+
+	// LDAP SSHA384
+	case '{ssha384}'        :
+		// SHA-2 SHA-384 Key length = 384bits = 48bytes
+		$salt = ($salt != '' ? substr(base64_decode($salt), 48) : substr(crypt(''), -8));
+		$hash = ($prefix ? ($canonical ? '{SSHA384}' : $scheme) : '') .
+			base64_encode(hash('sha384', $phrase . $salt, TRUE) . $salt);
+		break;
+
+	// LDAP SHA512
+	case '{sha512}'        :
+		$hash = ($prefix ? ($canonical ? '{SHA512}' : $scheme) : '') .
+			base64_encode(hash('sha512', $phrase, TRUE));
+		break;
+
+	// LDAP SSHA512
+	case '{ssha512}'        :
+		// SHA-2 SHA-512 Key length = 512bits = 64bytes
+		$salt = ($salt != '' ? substr(base64_decode($salt), 64) : substr(crypt(''), -8));
+		$hash = ($prefix ? ($canonical ? '{SSHA512}' : $scheme) : '') .
+			base64_encode(hash('sha512', $phrase . $salt, TRUE) . $salt);
 		break;
 
 	// LDAP CLEARTEXT and just cleartext
@@ -154,23 +215,23 @@ function pkwk_ldap_escape_dn($value) {
 // Basic-auth related ----
 
 // Check edit-permission
-function check_editable($page, $auth_flag = TRUE, $exit_flag = TRUE)
+function check_editable($page, $auth_enabled = TRUE, $exit_on_fail = TRUE)
 {
-	global $script, $_title_cannotedit, $_msg_unfreeze;
+	global $_title_cannotedit, $_msg_unfreeze;
 
-	if (edit_auth($page, $auth_flag, $exit_flag) && is_editable($page)) {
+	if (edit_auth($page, $auth_enabled, $exit_on_fail) && is_editable($page)) {
 		// Editable
 		return TRUE;
 	} else {
 		// Not editable
-		if ($exit_flag === FALSE) {
+		if ($exit_on_fail === FALSE) {
 			return FALSE; // Without exit
 		} else {
 			// With exit
 			$body = $title = str_replace('$1',
 				htmlsc(strip_bracket($page)), $_title_cannotedit);
 			if (is_freeze($page))
-				$body .= '(<a href="' . $script . '?cmd=unfreeze&amp;page=' .
+				$body .= '(<a href="' . get_base_uri() . '?cmd=unfreeze&amp;page=' .
 					rawurlencode($page) . '">' . $_msg_unfreeze . '</a>)';
 			$page = str_replace('$1', make_search($page), $_title_cannotedit);
 			catbody($title, $page, $body);
@@ -179,31 +240,32 @@ function check_editable($page, $auth_flag = TRUE, $exit_flag = TRUE)
 	}
 }
 
-// Check read-permission
-function check_readable($page, $auth_flag = TRUE, $exit_flag = TRUE)
-{
-	return read_auth($page, $auth_flag, $exit_flag);
+/**
+ * Whether the page is readable from current user or not.
+ */
+function is_page_readable($page) {
+	global $read_auth_pages;
+	return _is_page_accessible($page, $read_auth_pages);
 }
 
-function edit_auth($page, $auth_flag = TRUE, $exit_flag = TRUE)
-{
-	global $edit_auth, $edit_auth_pages, $_title_cannotedit;
-	return $edit_auth ?  basic_auth($page, $auth_flag, $exit_flag,
-		$edit_auth_pages, $_title_cannotedit) : TRUE;
+/**
+ * Whether the page is writable from current user or not.
+ */
+function is_page_writable($page) {
+	global $edit_auth_pages;
+	return _is_page_accessible($page, $edit_auth_pages);
 }
 
-function read_auth($page, $auth_flag = TRUE, $exit_flag = TRUE)
-{
-	global $read_auth, $read_auth_pages, $_title_cannotread;
-	return $read_auth ?  basic_auth($page, $auth_flag, $exit_flag,
-		$read_auth_pages, $_title_cannotread) : TRUE;
-}
+/**
+ * Get whether a current auth user can access the page
+ *
+ * @param $page page name
+ * @param $auth_pages pagepattern -> groups map
+ * @return true if a current user can access the page
+ */
+function _is_page_accessible($page, $auth_pages) {
+	global $auth_method_type, $auth_user_groups, $auth_user;
 
-// Basic authentication
-function basic_auth($page, $auth_flag, $exit_flag, $auth_pages, $title_cannot)
-{
-	global $auth_method_type, $auth_users, $_msg_auth, $auth_user, $auth_groups;
-	global $auth_user_groups, $auth_type, $g_query_string;
 	// Checked by:
 	$target_str = '';
 	if ($auth_method_type == 'pagename') {
@@ -211,40 +273,115 @@ function basic_auth($page, $auth_flag, $exit_flag, $auth_pages, $title_cannot)
 	} else if ($auth_method_type == 'contents') {
 		$target_str = join('', get_source($page)); // Its contents
 	}
-
 	$user_list = array();
-	foreach($auth_pages as $key=>$val)
-		if (preg_match($key, $target_str))
+	foreach($auth_pages as $key=>$val) {
+		if (preg_match($key, $target_str)) {
 			$user_list = array_merge($user_list, explode(',', $val));
-
+		}
+	}
 	if (empty($user_list)) return TRUE; // No limit
+	if (!$auth_user) {
+		// Current user doesen't yet log in.
+		return FALSE;
+	}
+	if (count(array_intersect($auth_user_groups, $user_list)) === 0) {
+		return FALSE;
+	}
+	return TRUE;
+}
 
-	$matches = array();
-	if (PKWK_READONLY ||
-		! $auth_user ||
-		count(array_intersect($auth_user_groups, $user_list)) === 0)
-	{
+/**
+ * Ensure the page is readable, or show Login UI.
+ * @param $page page
+ */
+function ensure_page_readable($page) {
+	global $read_auth, $read_auth_pages, $_title_cannotread;
+	if (!$read_auth) {
+		return true;
+	}
+	return basic_auth($page, true, true,
+		$read_auth_pages, $_title_cannotread);
+}
+
+/**
+ * Ensure the page is writable, or show Login UI.
+ * @param $page page
+ */
+function ensure_page_writable($page) {
+	global $edit_auth, $edit_auth_pages, $_title_cannotedit;
+	if (!$edit_auth) {
+		return true;
+	}
+	return basic_auth($page, true, true,
+		$edit_auth_pages, $_title_cannotedit);
+}
+
+/**
+ * Check a page is readable or not, show Auth UI in some cases.
+ *
+ * @param $page page name
+ * @param $auth_enabled true if auth is available (Normally true)
+ * @param $exit_on_fail  (Normally true)
+ * @return true if the page is readable
+ */
+function check_readable($page, $auth_enabled = TRUE, $exit_on_fail = TRUE)
+{
+	return read_auth($page, $auth_enabled, $exit_on_fail);
+}
+
+function edit_auth($page, $auth_enabled = TRUE, $exit_on_fail = TRUE)
+{
+	global $edit_auth, $edit_auth_pages, $_title_cannotedit;
+	return $edit_auth ?  basic_auth($page, $auth_enabled, $exit_on_fail,
+		$edit_auth_pages, $_title_cannotedit) : TRUE;
+}
+
+function read_auth($page, $auth_enabled = TRUE, $exit_on_fail = TRUE)
+{
+	global $read_auth, $read_auth_pages, $_title_cannotread;
+	return $read_auth ?  basic_auth($page, $auth_enabled, $exit_on_fail,
+		$read_auth_pages, $_title_cannotread) : TRUE;
+}
+
+/**
+ * Authentication
+ *
+ * @param $page page name
+ * @param $auth_enabled true if auth is available
+ * @param $exit_on_fail Show forbidden message and stop all following processes
+ * @param $auth_pages accessible users -> pages pattern map
+ * @param $title_cannot forbidden message
+ */
+function basic_auth($page, $auth_enabled, $exit_on_fail, $auth_pages, $title_cannot)
+{
+	global $auth_users, $_msg_auth, $auth_user;
+	global $auth_type, $g_query_string;
+	$is_accessible = _is_page_accessible($page, $auth_pages);
+	if ($is_accessible) {
+		return TRUE;
+	} else {
 		// Auth failed
 		pkwk_common_headers();
-		if ($auth_flag && !$auth_user) {
+		if ($auth_enabled && !$auth_user) {
 			if (AUTH_TYPE_BASIC === $auth_type) {
 				header('WWW-Authenticate: Basic realm="' . $_msg_auth . '"');
 				header('HTTP/1.0 401 Unauthorized');
 			} elseif (AUTH_TYPE_FORM === $auth_type) {
-				$url_after_login = get_script_uri() . '?' . $g_query_string;
-				$loginurl = get_script_uri() . '?plugin=loginform'
+				$url_after_login = get_base_uri() . '?' . $g_query_string;
+				$loginurl = get_base_uri() . '?plugin=loginform'
 					. '&page=' . rawurlencode($page)
 					. '&url_after_login=' . rawurlencode($url_after_login);
 				header('HTTP/1.0 302 Found');
 				header('Location: ' . $loginurl);
-			} elseif (AUTH_TYPE_EXTERNAL === $auth_type) {
-				$url_after_login = get_script_uri() . '?' . $g_query_string;
+			} elseif (AUTH_TYPE_EXTERNAL === $auth_type ||
+				AUTH_TYPE_SAML === $auth_type) {
+				$url_after_login = get_base_uri(PKWK_URI_ABSOLUTE) . '?' . $g_query_string;
 				$loginurl = get_auth_external_login_url($page, $url_after_login);
 				header('HTTP/1.0 302 Found');
 				header('Location: ' . $loginurl);
 			}
 		}
-		if ($exit_flag) {
+		if ($exit_on_fail) {
 			$body = $title = str_replace('$1',
 				htmlsc(strip_bracket($page)), $title_cannot);
 			$page = str_replace('$1', make_search($page), $title_cannot);
@@ -252,8 +389,6 @@ function basic_auth($page, $auth_flag, $exit_flag, $auth_pages, $title_cannot)
 			exit;
 		}
 		return FALSE;
-	} else {
-		return TRUE;
 	}
 }
 
@@ -275,6 +410,7 @@ function ensure_valid_auth_user()
 			case AUTH_TYPE_EXTERNAL:
 			case AUTH_TYPE_EXTERNAL_REMOTE_USER:
 			case AUTH_TYPE_EXTERNAL_X_FORWARDED_USER:
+			case AUTH_TYPE_SAML:
 				break;
 			default:
 				// $auth_type is not valid, Set form auth as default
@@ -306,6 +442,7 @@ function ensure_valid_auth_user()
 		}
 		case AUTH_TYPE_FORM:
 		case AUTH_TYPE_EXTERNAL:
+		case AUTH_TYPE_SAML:
 		{
 			session_start();
 			$user = '';
@@ -318,7 +455,8 @@ function ensure_valid_auth_user()
 					$dynamic_groups = $_SESSION['dynamic_member_groups'];
 				} else {
 					$fullname = $user;
-					if ($auth_type === AUTH_TYPE_EXTERNAL && $ldap_user_account) {
+					if (($auth_type === AUTH_TYPE_EXTERNAL || $auth_type === AUTH_TYPE_SAML) &&
+						$ldap_user_account) {
 						$ldap_user_info = ldap_get_simple_user_info($user);
 						if ($ldap_user_info) {
 							$fullname = $ldap_user_info['fullname'];
@@ -551,7 +689,7 @@ function form_auth_redirect($location, $page)
 	if ($location) {
 		header('Location: ' . $location);
 	} else {
-		$url = get_script_uri() . '?' . $page;
+		$url = get_page_uri($page, PKWK_URI_ROOT);
 		header('Location: ' . $url);
 	}
 }
@@ -576,6 +714,7 @@ function get_auth_user_prefix() {
 	global $auth_provider_user_prefix_default;
 	global $auth_provider_user_prefix_ldap;
 	global $auth_provider_user_prefix_external;
+	global $auth_provider_user_prefix_saml;
 	$user_prefix = '';
 	switch ($auth_type) {
 		case AUTH_TYPE_BASIC:
@@ -585,6 +724,9 @@ function get_auth_user_prefix() {
 		case AUTH_TYPE_EXTERNAL_REMOTE_USER:
 		case AUTH_TYPE_EXTERNAL_X_FORWARDED_USER:
 			$user_prefix = $auth_provider_user_prefix_external;
+			break;
+		case AUTH_TYPE_SAML:
+			$user_prefix = $auth_provider_user_prefix_saml;
 			break;
 		case AUTH_TYPE_FORM:
 			if ($ldap_user_account) {

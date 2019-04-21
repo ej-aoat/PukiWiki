@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone.
 // template.inc.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2017 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -12,18 +12,25 @@ define('MAX_LEN', 60);
 
 function plugin_template_action()
 {
-	global $script, $vars;
+	global $vars;
 	global $_title_edit;
 	global $_msg_template_start, $_msg_template_end, $_msg_template_page, $_msg_template_refer;
 	global $_btn_template_create, $_title_template;
 	global $_err_template_already, $_err_template_invalid, $_msg_template_force;
 
+	$script = get_base_uri();
 	if (PKWK_READONLY) die_message('PKWK_READONLY prohibits editing');
-	if (! isset($vars['refer']) || ! is_page($vars['refer']))
+	if (! isset($vars['refer']) || ! is_page($vars['refer'])) {
+		if (isset($vars['action']) && $vars['action'] === 'list') {
+			plugin_template_output_list();
+			exit;
+		}
 		return FALSE;
-
-	$lines = get_source($vars['refer']);
-
+	}
+	$refer = $vars['refer'];
+	// Ensure page is readable, or show Login UI and exit
+	ensure_page_readable($refer);
+	$lines = get_source($refer);
 	// Remove '#freeze'
 	if (! empty($lines) && strtolower(rtrim($lines[0])) == '#freeze')
 		array_shift($lines);
@@ -43,6 +50,8 @@ function plugin_template_action()
 
 	// edit
 	if ($is_pagename = is_pagename($page) && (! $is_page || ! empty($vars['force']))) {
+	// Ensure page is readable, or show Login UI and exit
+		ensure_page_writable($page);
 		$postdata       = join('', array_splice($lines, $begin, $end - $begin + 1));
 		$retvar['msg']  = $_title_edit;
 		$retvar['body'] = edit_form($vars['page'], $postdata);
@@ -89,4 +98,21 @@ EOD;
 	$retvar['body'] = $ret;
 
 	return $retvar;
+}
+
+function plugin_template_output_list()
+{
+	$template_page_key = 'template_pages';
+	$empty_result = '{"' . $template_page_key . '":[]}';
+	header('Content-Type: application/json; charset=UTF-8');
+	// PHP 5.4+
+	$enabled = defined('JSON_UNESCAPED_UNICODE') && defined('PKWK_UTF8_ENABLE');
+	if (!$enabled) {
+		print($empty_result);
+		exit;
+	}
+	$template_pages = array_values(get_template_page_list());
+	$ar = array($template_page_key => $template_pages);
+	print(json_encode($ar, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+	exit;
 }

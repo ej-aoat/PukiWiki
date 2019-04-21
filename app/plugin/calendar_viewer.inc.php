@@ -1,7 +1,7 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: calendar_viewer.inc.php,v 1.37 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C) 2002-2005, 2007 PukiWiki Developers Team
+// calendar_viewer.inc.php
+// Copyright  2002-2017 PukiWiki Development Team
 // License: GPL v2 or (at your option) any later version
 //
 // Calendar viewer plugin - List pages that calendar/calnedar2 plugin created
@@ -17,6 +17,10 @@ define('PLUGIN_CALENDAR_VIEWER_DATE_FORMAT',
 	//	'[Y-m-d]'     // '[2004-02-09]'
 		'Y/n/j ($\w)' // '2004/2/9 (Mon)'
 	);
+/**
+ * Limit of show count per pagename
+ */
+define('PLUGIN_CALENDAR_VIEWER_MAX_SHOW_COUNT', 4);
 
 // ----
 
@@ -55,7 +59,7 @@ function plugin_calendar_viewer_convert()
 	global $_msg_calendar_viewer_right, $_msg_calendar_viewer_left;
 	global $_msg_calendar_viewer_restrict, $_err_calendar_viewer_param2;
 
-	static $viewed = array();
+	static $show_count = array();
 
 	if (func_num_args() < 2)
 		return PLUGIN_CALENDAR_VIEWER_USAGE . '<br />' . "\n";
@@ -102,58 +106,42 @@ function plugin_calendar_viewer_convert()
 	if (isset($func_args[3])) $date_sep = $func_args[3];
 
 	// Avoid Loop etc.
-	if (isset($viewed[$pagename])) {
+	if (!isset($show_count[$pagename])) {
+		$show_count[$pagename] = 0;
+	}
+	$show_count[$pagename] += 1;
+	if ($show_count[$pagename] > PLUGIN_CALENDAR_VIEWER_MAX_SHOW_COUNT) {
 		$s_page = htmlsc($pagename);
-		return "#calendar_viewer(): You already view: $s_page<br />";
-	} else {
-		$viewed[$pagename] = TRUE; // Valid
+		return "#calendar_viewer(): Exceeded the limit of show count: $s_page<br />";
 	}
-
-	// 一覧表示するページ名とファイル名のパターン　ファイル名には年月を含む
-	if ($pagename == '') {
-		// pagename無しのyyyy-mm-ddに対応するための処理
-		$pagepattern     = '';
-		$pagepattern_len = 0;
-		$filepattern     = encode($page_YM);
-		$filepattern_len = strlen($filepattern);
-	} else {
-		$pagepattern     = strip_bracket($pagename) . '/';
-		$pagepattern_len = strlen($pagepattern);
-		$filepattern     = encode($pagepattern . $page_YM);
-		$filepattern_len = strlen($filepattern);
+	// page name pattern
+	$pagepattern = strip_bracket($pagename) . '/';
+	if ($pagename === '') {
+		// Support non-pagename yyyy-mm-dd pattern
+		$pagepattern = '';
 	}
-
-	// ページリストの取得
+	$pagepattern_len = strlen($pagepattern);
+	// Get pagelist
 	$pagelist = array();
-	if ($dir = @opendir(DATA_DIR)) {
-		$_date = get_date('Y' . $date_sep . 'm' . $date_sep . 'd');
-		$page_date  = '';
-		while($file = readdir($dir)) {
-			if ($file == '..' || $file == '.') continue;
-			if (substr($file, 0, $filepattern_len) != $filepattern) continue;
-
-			$page      = decode(trim(preg_replace('/\.txt$/', ' ', $file)));
-			$page_date = substr($page, $pagepattern_len);
-
-			// Verify the $page_date pattern (Default: yyyy-mm-dd).
-			// Past-mode hates the future, and
-			// Future-mode hates the past.
-			if ((plugin_calendar_viewer_isValidDate($page_date, $date_sep) == FALSE) || 
-				($page_date > $_date && ($mode == 'past')) ||
-				($page_date < $_date && ($mode == 'future')))
-					continue;
-
-			$pagelist[] = $page;
+	$_date = get_date('Y' . $date_sep . 'm' . $date_sep . 'd');
+	foreach (get_existpages() as $page) {
+		if (strncmp($page, $pagepattern, $pagepattern_len) !== 0) continue;
+		$page_date = substr($page, $pagepattern_len);
+		// Verify the $page_date pattern (Default: yyyy-mm-dd).
+		// Past-mode hates the future, and
+		// Future-mode hates the past.
+		if ((plugin_calendar_viewer_isValidDate($page_date, $date_sep) === FALSE) ||
+			($page_date > $_date && ($mode === 'past')) ||
+			($page_date < $_date && ($mode === 'future'))) {
+				continue;
 		}
+		$pagelist[] = $page;
 	}
-	closedir($dir);
-
 	if ($mode == 'past') {
 		rsort($pagelist, SORT_STRING);	// New => Old
 	} else {
 		sort($pagelist, SORT_STRING);	// Old => New
 	}
-
 	// Include start
 	$tmppage     = $vars['page'];
 	$return_body = '';
@@ -177,7 +165,7 @@ function plugin_calendar_viewer_convert()
 
 		if (PLUGIN_CALENDAR_VIEWER_DATE_FORMAT !== FALSE) {
 			$time = strtotime(basename($page)); // $date_sep must be assumed '-' or ''!
-			if ($time == -1) {
+			if ($time === FALSE || $time === -1) {
 				$s_page = htmlsc($page); // Failed. Why?
 			} else {
 				$week   = $weeklabels[date('w', $time)];
@@ -330,4 +318,3 @@ function plugin_calendar_viewer_isValidDate($aStr, $aSepList = '-/ .')
 		return FALSE;
 	}
 }
-

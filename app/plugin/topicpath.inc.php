@@ -1,14 +1,14 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: topicpath.inc.php,v 1.9 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2004-2005 PukiWiki Developers Team
+// topicpath.inc.php
+// Copyright
+//   2004-2018 PukiWiki Development Team
 //   2003      reimy       (Some bug fix)
 //   2003      t.m         (Migrate to 1.3)
 //   2003      Nibun-no-ni (Originally written for PukiWiki 1.4.x)
-// License: GPL (any version)
+// License: GPL v2 or (at your option) any later version
 //
-// 'topicpath' plugin for PukiWiki, available under GPL
+// 'topicpath' plugin for PukiWiki
 
 // Show a link to $defaultpage or not
 define('PLUGIN_TOPICPATH_TOP_DISPLAY', 1);
@@ -17,7 +17,7 @@ define('PLUGIN_TOPICPATH_TOP_DISPLAY', 1);
 define('PLUGIN_TOPICPATH_TOP_LABEL', 'Top');
 
 // Separetor / of / topic / path
-define('PLUGIN_TOPICPATH_TOP_SEPARATOR', ' / ');
+define('PLUGIN_TOPICPATH_TOP_SEPARATOR', '<span class="topicpath-slash">/</span>');
 
 // Show the page itself or not
 define('PLUGIN_TOPICPATH_THIS_PAGE_DISPLAY', 1);
@@ -30,44 +30,53 @@ function plugin_topicpath_convert()
 	return '<div>' . plugin_topicpath_inline() . '</div>';
 }
 
-function plugin_topicpath_inline()
+function plugin_topicpath_parent_links($page)
 {
-	global $script, $vars, $defaultpage;
-
-	$page = isset($vars['page']) ? $vars['page'] : '';
-	if ($page == '' || $page == $defaultpage) return '';
-
 	$parts = explode('/', $page);
-
-	$b_link = TRUE;
-	if (PLUGIN_TOPICPATH_THIS_PAGE_DISPLAY) {
-		$b_link = PLUGIN_TOPICPATH_THIS_PAGE_LINK;
-	} else {
-		array_pop($parts); // Remove the page itself
+	$parents = array();
+	for ($i = 0, $pos = 0; $pos = strpos($page, '/', $i); $i = $pos + 1) {
+		$p = substr($page, 0, $pos);
+		$parents[] = array(
+			'page' => $p,
+			'leaf' => substr($p, $i),
+			'uri' => get_page_uri($p),
+		);
 	}
-
-	$topic_path = array();
-	while (! empty($parts)) {
-		$_landing = join('/', $parts);
-		$landing  = pagename_urlencode($_landing);
-		$element  = htmlsc(array_pop($parts));
-		if (! $b_link)  {
-			// This page ($_landing == $page)
-			$b_link = TRUE;
-			$topic_path[] ='<li class="breadcrumb-item">' . $element . '</li>';
-		} else if (PKWK_READONLY && ! is_page($_landing)) {
-			// Page not exists
-			$topic_path[] ='<li class="breadcrumb-item">' . $element . '</li>';
-		} else {
-			// Page exists or not exists
-			$topic_path[] = '<li class="breadcrumb-item"><a href="' . $script . '?' . $landing . '">' .
-				$element . '</a></li>';
-		}
-	}
-
-	if (PLUGIN_TOPICPATH_TOP_DISPLAY)
-		$topic_path[] = '<li class="breadcrumb-item">' . make_pagelink($defaultpage, PLUGIN_TOPICPATH_TOP_LABEL) . '</li>';
-
-	return join('', array_reverse($topic_path));
+	return $parents;
 }
 
+function plugin_topicpath_inline()
+{
+	global $vars, $defaultpage;
+	$page = isset($vars['page']) ? $vars['page'] : '';
+	if ($page == '' || $page == $defaultpage) return '';
+	$parents = plugin_topicpath_parent_links($page);
+	$topic_path = array();
+	foreach ($parents as $p) {
+		if (PKWK_READONLY && !is_page($p['page'])) {
+			// Page not exists
+			$topic_path[] = htmlsc($p['leaf']);
+		} else {
+			// Page exists or not exists
+			$topic_path[] = '<a href="' . $p['uri'] . '">' .
+				$p['leaf'] . '</a>';
+		}
+	}
+	// This page
+	if (PLUGIN_TOPICPATH_THIS_PAGE_DISPLAY) {
+		$leaf_name = preg_replace('#^.*/#', '', $page);
+		if (PLUGIN_TOPICPATH_THIS_PAGE_LINK) {
+			$topic_path[] = '<a href="' . get_page_uri($page) . '">' .
+				$leaf_name . '</a>';
+		} else {
+			$topic_path[] = htmlsc($leaf_name);
+		}
+	}
+	$s = join(PLUGIN_TOPICPATH_TOP_SEPARATOR, $topic_path);
+	if (PLUGIN_TOPICPATH_TOP_DISPLAY) {
+		$s = '<span class="topicpath-top">' .
+			make_pagelink($defaultpage, PLUGIN_TOPICPATH_TOP_LABEL) .
+			PLUGIN_TOPICPATH_TOP_SEPARATOR . '</span>' . $s;
+	}
+	return $s;
+}

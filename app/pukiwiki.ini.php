@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone
 // pukiwiki.ini.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2019 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -150,8 +150,8 @@ $nofollow = 0; // 1 = Try hiding from search engines
 
 /////////////////////////////////////////////////
 
-// PKWK_ALLOW_JAVASCRIPT - Allow / Prohibit using JavaScript
-define('PKWK_ALLOW_JAVASCRIPT', 0);
+// PKWK_ALLOW_JAVASCRIPT - Must be 1 only for compatibility
+define('PKWK_ALLOW_JAVASCRIPT', 1);
 
 /////////////////////////////////////////////////
 // _Disable_ WikiName auto-linking
@@ -181,9 +181,11 @@ $adminpass = '{x-php-md5}!';
 // Sample:
 //$adminpass = 'pass'; // Cleartext
 //$adminpass = '{x-php-md5}1a1dc91c907325c69271ddf0c944bc72'; // PHP md5()  'pass'
+//$adminpass = '{x-php-sha256}d74ff0ee8da3b9806b18c877dbf29bbde50b5bd8e4dad7a3a725000feb82e8f1'; // PHP sha256  'pass'
 //$adminpass = '{CRYPT}$1$AR.Gk94x$uCe8fUUGMfxAPH83psCZG/';   // LDAP CRYPT 'pass'
 //$adminpass = '{MD5}Gh3JHJBzJcaScd3wyUS8cg==';               // LDAP MD5   'pass'
 //$adminpass = '{SMD5}o7lTdtHFJDqxFOVX09C8QnlmYmZnd2Qx';      // LDAP SMD5  'pass'
+//$adminpass = '{SHA256}10/w7o2juYBrGMh32/KbveULW9jk2tejpyUAD+uC6PE=' // LDAP SHA256 'pass'
 
 /////////////////////////////////////////////////
 // Page-reading feature settings
@@ -235,6 +237,7 @@ $ldap_user_account = 0; // (0: Disabled, 1: Enabled)
 $auth_provider_user_prefix_default = 'default:';
 $auth_provider_user_prefix_ldap = 'ldap:';
 $auth_provider_user_prefix_external = 'external:';
+$auth_provider_user_prefix_saml = 'saml:';
 
 
 /////////////////////////////////////////////////
@@ -288,12 +291,83 @@ $edit_auth_pages = array(
 $search_auth = 0;
 
 /////////////////////////////////////////////////
+// AutoTicketLink
+$ticket_link_sites = array(
+/*
+	array(
+		'key' => 'phpbug',
+		'type' => 'redmine', // type: redmine, jira or git
+		'title' => 'PHP :: Bug #$1',
+		'base_url' => 'https://bugs.php.net/bug.php?id=',
+	),
+	array(
+		'key' => 'asfjira',
+		'type' => 'jira',
+		'title' => 'ASF JIRA [$1]',
+		'base_url' => 'https://issues.apache.org/jira/browse/',
+	),
+	array(
+		'key' => 'pukiwiki-commit',
+		'type' => 'git',
+		'title' => 'PukiWiki revision $1',
+		'base_url' => 'https://ja.osdn.net/projects/pukiwiki/scm/git/pukiwiki/commits/',
+	),
+*/
+);
+// AutoTicketLink - JIRA Default site
+/*
+$ticket_jira_default_site = array(
+	'title' => 'My JIRA - $1',
+	'base_url' => 'https://issues.example.com/jira/browse/',
+);
+//*/
+
+/////////////////////////////////////////////////
+// Show External Link Cushion Page
+// 0: Disabled
+// 1: Enabled
+$external_link_cushion_page = 0;
+$external_link_cushion = array(
+	// Wait N seconds before jumping to an external site
+	'wait_seconds' => 5,
+	// Internal site domain list
+	'internal_domains' => array(
+		'localhost',
+		// '*.example.com',
+	),
+	// Don't show extenal link icons on these domains
+	'silent_external_domains' => array(
+		'pukiwiki.osdn.jp',
+		'pukiwiki.example.com',
+	),
+);
+
+/////////////////////////////////////////////////
+// Show Topicpath title
+// 0: Disabled
+// 1: Enabled
+$topicpath_title = 1;
+
+/////////////////////////////////////////////////
+// Output HTML meta Referrer Policy
+// Value: '' (default), no-referrer, origin, same-origin, ...
+// Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Referrer-Policy
+$html_meta_referrer_policy = '';
+
+/////////////////////////////////////////////////
+// Output custom HTTP response headers
+$http_response_custom_headers = array(
+	// 'Strict-Transport-Security: max-age=86400',
+	// 'X-Content-Type-Options: nosniff',
+);
+
+/////////////////////////////////////////////////
 // $whatsnew: Max number of RecentChanges
-$maxshow = 60;
+$maxshow = 500;
 
 // $whatsdeleted: Max number of RecentDeleted
 // (0 = Disabled)
-$maxshow_deleted = 60;
+$maxshow_deleted = 200;
 
 /////////////////////////////////////////////////
 // Page names can't be edit via PukiWiki
@@ -419,6 +493,13 @@ $non_list = '^\:';
 // Search ignored pages
 $search_non_list = 1;
 
+
+// Page redirect rules
+$page_redirect_rules = array(
+	//'#^FromProject($|(/(.+)$))#' => 'ToProject$1',
+	//'#^FromProject($|(/(.+)$))#' => function($matches) { return 'ToProject' . $matches[1]; },
+);
+
 /////////////////////////////////////////////////
 // Template setting
 
@@ -442,6 +523,11 @@ $line_break = 1;
 /////////////////////////////////////////////////
 // Use date-time rules (See rules.ini.php)
 $usedatetime = 1;
+
+/////////////////////////////////////////////////
+// Logging updates (0 or 1)
+$logging_updates = 0;
+$logging_updates_log_dir = '/var/log/pukiwiki';
 
 /////////////////////////////////////////////////
 // User-Agent settings

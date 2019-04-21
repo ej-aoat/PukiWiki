@@ -1,7 +1,7 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: tracker.inc.php,v 1.124 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C) 2003-2005, 2007 PukiWiki Developers Team
+// tracker.inc.php
+// Copyright 2003-2018 PukiWiki Development Team
 // License: GPL v2 or (at your option) any later version
 //
 // Issue tracker plugin (See Also bugtrack plugin)
@@ -15,10 +15,14 @@ define('TRACKER_LIST_EXCLUDE_PATTERN','#^SubMenu$|/#');
 // 項目の取り出しに失敗したページを一覧に表示する
 define('TRACKER_LIST_SHOW_ERROR_PAGE',TRUE);
 
+// Use cache
+define('TRACKER_LIST_USE_CACHE', TRUE);
+
 function plugin_tracker_convert()
 {
-	global $script,$vars;
+	global $vars;
 
+	$script = get_base_uri();
 	if (PKWK_READONLY) return ''; // Show nothing
 
 	$base = $refer = $vars['page'];
@@ -121,26 +125,30 @@ function plugin_tracker_action()
 			'body'=>'page name ('.htmlsc($base).') is not valid.'
 		);
 	}
-	$num = 0;
 	$name = (array_key_exists('_name',$post)) ? $post['_name'] : '';
-	if (array_key_exists('_page',$post))
-	{
-		$page = $real = $post['_page'];
+	$_page = (array_key_exists('_page',$post)) ? $post['_page'] : '';
+	if (is_pagename($_page)) {
+		// Create _page page if _page is in parameters
+		$page = $real = $_page;
+	} else if (is_pagename($name)) {
+		// Create "$base/$name" page if _name is in parameters
+		$real = $name;
+		$page = get_fullname('./' . $name, $base);
+	} else {
+		$page = '';
 	}
-	else
-	{
-		$real = is_pagename($name) ? $name : ++$num;
-		$page = get_fullname('./'.$real,$base);
-	}
-	if (!is_pagename($page))
-	{
-		$page = $base;
-	}
-
-	while (is_page($page))
-	{
-		$real = ++$num;
-		$page = "$base/$real";
+	if (!is_pagename($page) || is_page($page)) {
+		// Need new page name => Get last article number + 1
+		$page_list = plugin_tracker_get_page_list($base, false);
+		usort($page_list, '_plugin_tracker_list_paganame_compare');
+		if (count($page_list) === 0) {
+			$num = 1;
+		} else {
+			$latest_page = $page_list[count($page_list) - 1]['name'];
+			$num = intval(substr($latest_page, strlen($base) + 1)) + 1;
+		}
+		$real = '' . $num;
+		$page = $base . '/' . $num;
 	}
 	// ページデータを生成
 	$postdata = plugin_tracker_get_source($source);
@@ -155,6 +163,7 @@ function plugin_tracker_action()
 
 	$fields = plugin_tracker_get_fields($page,$refer,$config);
 
+	check_editable($page, true, true);
 	// Creating an empty page, before attaching files
 	touch(get_filename($page));
 
@@ -180,42 +189,38 @@ function plugin_tracker_action()
 
 	// Writing page data, without touch
 	page_write($page, join('', $postdata));
-
-	$r_page = pagename_urlencode($page);
-
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . $r_page);
+	header('Location: ' . get_page_uri($page, PKWK_URI_ROOT));
 	exit;
 }
-/*
-function plugin_tracker_inline()
+
+/**
+ * Page_list comparator
+ */
+function _plugin_tracker_list_paganame_compare($a, $b)
 {
-	global $vars;
-
-	if (PKWK_READONLY) return ''; // Show nothing
-
-	$args = func_get_args();
-	if (count($args) < 3)
-	{
-		return FALSE;
-	}
-	$body = array_pop($args);
-	list($config_name,$field) = $args;
-
-	$config = new Config('plugin/tracker/'.$config_name);
-
-	if (!$config->read())
-	{
-		return "config file '".htmlsc($config_name)."' not found.";
-	}
-
-	$config->config_name = $config_name;
-
-	$fields = plugin_tracker_get_fields($vars['page'],$vars['page'],$config);
-	$fields[$field]->default_value = $body;
-	return $fields[$field]->get_tag();
+	return strnatcmp($a['name'], $b['name']);
 }
-*/
+
+/**
+ * Get page list for "$page/"
+ */
+function plugin_tracker_get_page_list($page, $needs_filetime) {
+	$page_list = array();
+	$pattern = $page . '/';
+	$pattern_len = strlen($pattern);
+	foreach (get_existpages() as $p) {
+		if (strncmp($p, $pattern, $pattern_len) === 0 && pkwk_ctype_digit(substr($p, $pattern_len))) {
+			if ($needs_filetime) {
+				$page_list[] = array('name'=>$p,'filetime'=>get_filetime($p));
+			} else {
+				$page_list[] = array('name'=>$p);
+			}
+		}
+	}
+	return $page_list;
+}
+
 // フィールドオブジェクトを構築する
 function plugin_tracker_get_fields($base,$refer,&$config)
 {
@@ -268,6 +273,10 @@ class Tracker_field
 	var $id = 0;
 
 	function Tracker_field($field,$page,$refer,&$config)
+	{
+		$this->__construct($field, $page, $refer, $config);
+	}
+	function __construct($field,$page,$refer,&$config)
 	{
 		global $post;
 		static $id = 0;
@@ -366,6 +375,7 @@ class Tracker_field_textarea extends Tracker_field
 		return $str;
 	}
 }
+
 class Tracker_field_format extends Tracker_field
 {
 	var $sort_type = SORT_STRING;
@@ -375,11 +385,15 @@ class Tracker_field_format extends Tracker_field
 
 	function Tracker_field_format($field,$page,$refer,&$config)
 	{
-		parent::Tracker_field($field,$page,$refer,$config);
+		$this->__construct($field, $page, $refer, $config);
+	}
+	function __construct($field,$page,$refer,&$config)
+	{
+		parent::__construct($field,$page,$refer,$config);
 
 		foreach ($this->config->get($this->name) as $option)
 		{
-			list($key,$style,$format) = array_pad(array_map(create_function('$a','return trim($a);'),$option),3,'');
+			list($key,$style,$format) = array_pad(array_map('trim',$option),3,'');
 			if ($style != '')
 			{
 				$this->styles[$key] = $style;
@@ -471,7 +485,8 @@ class Tracker_field_radio extends Tracker_field_format
 		static $options = array();
 		if (!array_key_exists($this->name,$options))
 		{
-			$options[$this->name] = array_flip(array_map(create_function('$arr','return $arr[0];'),$this->config->get($this->name)));
+			// 'reset' means function($arr) { return $arr[0]; }
+			$options[$this->name] = array_flip(array_map('reset',$this->config->get($this->name)));
 		}
 		return array_key_exists($value,$options[$this->name]) ? $options[$this->name][$value] : $value;
 	}
@@ -575,7 +590,7 @@ class Tracker_field_past extends Tracker_field
 
 	function format_cell($timestamp)
 	{
-		return get_passage($timestamp,FALSE);
+		return '&passage("' . get_date_atom($timestamp + LOCALZONE) . '");';
 	}
 	function get_value($value)
 	{
@@ -586,21 +601,30 @@ class Tracker_field_past extends Tracker_field
 // 一覧表示
 function plugin_tracker_list_convert()
 {
-	global $vars;
-
+	global $vars, $_title_cannotread;
 	$config = 'default';
 	$page = $refer = $vars['page'];
 	$field = '_page';
 	$order = '';
 	$list = 'list';
 	$limit = NULL;
+	$start_n = NULL;
+	$last_n = NULL;
 	if (func_num_args())
 	{
 		$args = func_get_args();
 		switch (count($args))
 		{
 			case 4:
-				$limit = is_numeric($args[3]) ? $args[3] : $limit;
+				$range_m = null;
+				if (is_numeric($args[3])) {
+					$limit = $args[3];
+				} else {
+					if (preg_match('#^(\d+)-(\d+)$#', $args[3], $range_m)) {
+						$start_n = intval($range_m[1]);
+						$last_n = intval($range_m[2]);
+					}
+				}
 			case 3:
 				$order = $args[2];
 			case 2:
@@ -611,11 +635,15 @@ function plugin_tracker_list_convert()
 				list($config,$list) = array_pad(explode('/',$config,2),2,$list);
 		}
 	}
-	return plugin_tracker_getlist($page,$refer,$config,$list,$order,$limit);
+	if (!is_page_readable($page)) {
+		$body = str_replace('$1', htmlsc($page), $_title_cannotread);
+		return $body;
+	}
+	return plugin_tracker_getlist($page,$refer,$config,$list,$order,$limit,$start_n,$last_n);
 }
 function plugin_tracker_list_action()
 {
-	global $script,$vars,$_tracker_messages;
+	global $vars, $_tracker_messages, $_title_cannotread;
 
 	$page = $refer = $vars['refer'];
 	$s_page = make_pagelink($page);
@@ -623,31 +651,116 @@ function plugin_tracker_list_action()
 	$list = array_key_exists('list',$vars) ? $vars['list'] : 'list';
 	$order = array_key_exists('order',$vars) ? $vars['order'] : '_real:SORT_DESC';
 
+	if (!is_page_readable($page)) {
+		$body = str_replace('$1', htmlsc($page), $_title_cannotread);
+		return array(
+			'msg' => $body,
+			'body' => $body
+		);
+	}
 	return array(
 		'msg' => $_tracker_messages['msg_list'],
 		'body'=> str_replace('$1',$s_page,$_tracker_messages['msg_back']).
 			plugin_tracker_getlist($page,$refer,$config,$list,$order)
 	);
 }
-function plugin_tracker_getlist($page,$refer,$config_name,$list,$order='',$limit=NULL)
+function plugin_tracker_getlist($page,$refer,$config_name,$list,$order='',$limit=NULL,$start_n=NULL,$last_n=NULL)
 {
+	global $whatsdeleted;
 	$config = new Config('plugin/tracker/'.$config_name);
-
 	if (!$config->read())
 	{
 		return "<p>config file '".htmlsc($config_name)."' is not exist.</p>";
 	}
-
 	$config->config_name = $config_name;
 
 	if (!is_page($config->page.'/'.$list))
 	{
 		return "<p>config file '".make_pagelink($config->page.'/'.$list)."' not found.</p>";
 	}
-
-	$list = new Tracker_list($page,$refer,$config,$list);
-	$list->sort($order);
-	return $list->toString($limit);
+	$cache_enabled = defined('TRACKER_LIST_USE_CACHE') && TRACKER_LIST_USE_CACHE &&
+		defined('JSON_UNESCAPED_UNICODE') && defined('PKWK_UTF8_ENABLE');
+	if (is_null($limit) && is_null($start_n)) {
+		$cache_filepath = CACHE_DIR . encode($page) . '.tracker';
+	} else if (pkwk_ctype_digit($limit) && 0 < $limit && $limit <= 1000) {
+		$cache_filepath = CACHE_DIR . encode($page) . '.' . $limit . '.tracker';
+	} else if (!is_null($start_n) && !is_null($last_n)) {
+		$cache_filepath = CACHE_DIR . encode($page) . '.' . $start_n . '-' . $last_n . '.tracker';
+	} else {
+		$cache_enabled = false;
+	}
+	$cachedata = null;
+	$cache_format_version = 1;
+	if ($cache_enabled) {
+		$config_filetime = get_filetime($config->page);
+		$config_list_filetime = get_filetime($config->page.'/'. $list);
+		if (file_exists($cache_filepath)) {
+			$json_cached = pkwk_file_get_contents($cache_filepath);
+			if ($json_cached) {
+				$wrapdata = json_decode($json_cached, true);
+				if (is_array($wrapdata) && isset($wrapdata['version'],
+					$wrapdata['html'], $wrapdata['refreshed_at'])) {
+					$cache_time_prev = $wrapdata['refreshed_at'];
+					if ($cache_format_version === $wrapdata['version']) {
+						if ($config_filetime === $wrapdata['config_updated_at'] &&
+							$config_list_filetime === $wrapdata['config_list_updated_at']) {
+							$cachedata = $wrapdata;
+						} else {
+							// (Ignore) delete file
+							unlink($cache_filepath);
+						}
+					}
+				}
+			}
+		}
+	}
+	// Check recent.dat timestamp
+	$recent_dat_filemtime = filemtime(CACHE_DIR . PKWK_MAXSHOW_CACHE);
+	// Check RecentDeleted timestamp
+	$recent_deleted_filetime = get_filetime($whatsdeleted);
+	if (is_null($cachedata)) {
+		$cachedata = array();
+	} else {
+		if ($recent_dat_filemtile !== false) {
+			if ($recent_dat_filemtime === $cachedata['recent_dat_filemtime'] &&
+				$recent_deleted_filetime === $cachedata['recent_deleted_filetime'] &&
+				$order === $cachedata['order']) {
+				// recent.dat is unchanged
+				// RecentDeleted is unchanged
+				// order is unchanged
+				return $cachedata['html'];
+			}
+		}
+	}
+	$cache_holder = $cachedata;
+	$tracker_list = new Tracker_list($page,$refer,$config,$list,$cache_holder);
+	if ($order === $cache_holder['order'] &&
+		empty($tracker_list->newly_deleted_pages) &&
+		empty($tracker_list->newly_updated_pages) &&
+		!$tracker_list->link_update_required &&
+		is_null($start_n) && is_null($last_n)) {
+		$result = $cache_holder['html'];
+	} else {
+		$tracker_list->sort($order);
+		$result = $tracker_list->toString($limit,$start_n,$last_n);
+	}
+	if ($cache_enabled) {
+		$refreshed_at = time();
+		$json = array(
+			'refreshed_at' => $refreshed_at,
+			'rows' => $tracker_list->rows,
+			'html' => $result,
+			'order' => $order,
+			'config_updated_at' => $config_filetime,
+			'config_list_updated_at' => $config_list_filetime,
+			'recent_dat_filemtime' => $recent_dat_filemtime,
+			'recent_deleted_filetime' => $recent_deleted_filetime,
+			'link_pages' => $tracker_list->link_pages,
+			'version' => $cache_format_version);
+		$cache_body = json_encode($json, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		file_put_contents($cache_filepath, $cache_body, LOCK_EX);
+	}
+	return $result;
 }
 
 // 一覧クラス
@@ -662,9 +775,16 @@ class Tracker_list
 	var $rows;
 	var $order;
 	var $sort_keys;
+	var $newly_deleted_pages = array();
+	var $newly_updated_pages = array();
 
-	function Tracker_list($page,$refer,&$config,$list)
+	function Tracker_list($page,$refer,&$config,$list,&$cache_holder)
 	{
+		$this->__construct($page, $refer, $config, $list, $cache_holder);
+	}
+	function __construct($page,$refer,&$config,$list,&$cache_holder)
+	{
+		global $whatsdeleted, $_cached_page_filetime;
 		$this->page = $page;
 		$this->config = &$config;
 		$this->list = $list;
@@ -689,22 +809,192 @@ class Tracker_list
 				$this->pattern .= '(.*?)';
 			}
 		}
-		// ページの列挙と取り込み
-		$this->rows = array();
-		$pattern = "$page/";
-		$pattern_len = strlen($pattern);
-		foreach (get_existpages() as $_page)
-		{
-			if (strpos($_page,$pattern) === 0)
+		if (empty($cache_holder)) {
+			// List pages and get contents (non-cache behavior)
+			$this->rows = array();
+			$pattern = "$page/";
+			$pattern_len = strlen($pattern);
+			foreach (get_existpages() as $_page)
 			{
-				$name = substr($_page,$pattern_len);
-				if (preg_match(TRACKER_LIST_EXCLUDE_PATTERN,$name))
+				if (substr($_page, 0, $pattern_len) === $pattern)
 				{
-					continue;
+					$name = substr($_page,$pattern_len);
+					if (preg_match(TRACKER_LIST_EXCLUDE_PATTERN,$name))
+					{
+						continue;
+					}
+					$this->add($_page,$name);
 				}
-				$this->add($_page,$name);
+			}
+			$this->link_pages = $this->get_filetimes($this->get_all_links());
+		} else {
+			// Cache-available behavior
+			// Check RecentDeleted timestamp
+			$cached_rows = $this->decode_cached_rows($cache_holder['rows']);
+			$updated_linked_pages = array();
+			$newly_deleted_pages = array();
+			$pattern = "$page/";
+			$pattern_len = strlen($pattern);
+			$recent_deleted_filetime = get_filetime($whatsdeleted);
+			$deleted_page_list = array();
+			if ($recent_deleted_filetime !== $cache_holder['recent_deleted_filetime']) {
+				foreach (plugin_tracker_get_source($whatsdeleted) as $line) {
+					$m = null;
+					if (preg_match('#\[\[([^\]]+)\]\]#', $line, $m)) {
+						$_page = $m[1];
+						if (is_pagename($_page)) {
+							$deleted_page_list[] = $m[1];
+						}
+					}
+				}
+				foreach ($deleted_page_list as $_page) {
+					if (substr($_page, 0, $pattern_len) === $pattern) {
+						$name = substr($_page, $pattern_len);
+						if (!is_page($_page) && isset($cached_rows[$name]) &&
+							!preg_match(TRACKER_LIST_EXCLUDE_PATTERN, $name)) {
+							// This page was just deleted
+							array_push($newly_deleted_pages, $_page);
+							unset($cached_rows[$name]);
+						}
+					}
+				}
+			}
+			$this->newly_deleted_pages = $newly_deleted_pages;
+			$updated_pages = array();
+			$this->rows = $cached_rows;
+			// Check recent.dat timestamp
+			$recent_dat_filemtime = filemtime(CACHE_DIR . PKWK_MAXSHOW_CACHE);
+			$updated_page_list = array();
+			if ($recent_dat_filemtime !== $cache_holder['recent_dat_filemtime']) {
+				// recent.dat was updated. Search which page was updated.
+				$target_pages = array();
+				// Active page file time (1 hour before timestamp of recent.dat)
+				$target_filetime = $cache_holder['recent_dat_filemtime'] - LOCALZONE - 60 * 60;
+				foreach (get_recent_files() as $_page=>$time) {
+					if ($time <= $target_filetime) {
+						// Older updated pages
+						break;
+					}
+					$updated_page_list[$_page] = $time;
+					$name = substr($_page, $pattern_len);
+					if (substr($_page, 0, $pattern_len) === $pattern) {
+						$name = substr($_page, $pattern_len);
+						if (preg_match(TRACKER_LIST_EXCLUDE_PATTERN, $name)) {
+							continue;
+						}
+						// Tracker target page
+						if (isset($this->rows[$name])) {
+							// Existing page
+							$row = $this->rows[$name];
+							if ($row['_update'] === get_filetime($_page)) {
+								// Same as cache
+								continue;
+							} else {
+								// Found updated page
+								$updated_pages[] = $_page;
+								unset($this->rows[$name]);
+								$this->add($_page, $name);
+							}
+						} else {
+							// Add new page
+							$updated_pages[] = $_page;
+							$this->add($_page, $name);
+						}
+					}
+				}
+			}
+			$this->newly_updated_pages = $updated_pages;
+			$new_link_names = $this->get_all_links();
+			$old_link_map = array();
+			foreach ($cache_holder['link_pages'] as $link_page) {
+				$old_link_map[$link_page['page']] = $link_page['filetime'];
+			}
+			$new_link_map = $old_link_map;
+			$link_update_required = false;
+			foreach ($deleted_page_list as $_page) {
+				if (in_array($_page, $new_link_names)) {
+					if (isset($old_link_map[$_page])) {
+						// This link keeps existing
+						if (!is_page($_page)) {
+							// OK. Confirmed the page doesn't exist
+							if ($old_link_map[$_page] === 0) {
+								// Do nothing (From no-page to no-page)
+							} else {
+								// This page was just deleted
+								$new_link_map[$_page] = get_filetime($_page);
+								$link_update_required = true;
+							}
+						}
+					} else {
+						// This link was just added
+						$new_link_map[$_page] = get_filetime($_page);
+						$link_update_required = true;
+					}
+				}
+			}
+			foreach ($updated_page_list as $_page=>$time) {
+				if (in_array($_page, $new_link_names)) {
+					if (isset($old_link_map[$_page])) {
+						// This link keeps existing
+						if (is_page($_page)) {
+							// OK. Confirmed the page now exists
+							if ($old_link_map[$_page] === 0) {
+								// This page was just added
+								$new_link_map[$_page] = get_filetime($_page);
+								$link_update_required = true;
+							} else {
+								// Do nothing (existing-page to existing-page)
+							}
+						}
+					} else {
+						// This link was just added
+						$new_link_map[$_page] = get_filetime($_page);
+						$link_update_required = true;
+					}
+				}
+			}
+			$new_link_pages = array();
+			foreach ($new_link_map as $_page => $time) {
+				$new_link_pages[] = array(
+					'page' => $_page,
+					'filetime' => $time,
+				);
+			}
+			$this->link_pages = $new_link_pages;
+			$this->link_update_required = $link_update_required;
+			$time_map_for_cache = $new_link_map;
+			foreach ($this->rows as $row) {
+				$time_map_for_cache[$this->page . '/' . $row['_real']] = $row['_update'];
+			}
+			$_cached_page_filetime = $time_map_for_cache;
+		}
+	}
+	function decode_cached_rows($decoded_rows)
+	{
+		$ar = array();
+		foreach ($decoded_rows as $row) {
+			$ar[$row['_real']] = $row;
+		}
+		return $ar;
+	}
+	function get_all_links() {
+		$ar = array();
+		foreach ($this->rows as $row) {
+			foreach ($row['_links'] as $link) {
+				$ar[$link] = 0;
 			}
 		}
+		return array_keys($ar);
+	}
+	function get_filetimes($pages) {
+		$filetimes = array();
+		foreach ($pages as $page) {
+			$filetimes[] = array(
+				'page' => $page,
+				'filetime' => get_filetime($page),
+			);
+		}
+		return $filetimes;
 	}
 	function add($page,$name)
 	{
@@ -729,22 +1019,38 @@ class Tracker_list
 		}
 		$source = join('',preg_replace('/^(\*{1,3}.*)\[#[A-Za-z][\w-]+\](.*)$/','$1$2',$source));
 
-		// デフォルト値
-		$this->rows[$name] = array(
+		// Default value
+		$page_filetime = get_filetime($page);
+		$row = array(
 			'_page'  => "[[$page]]",
 			'_refer' => $this->page,
 			'_real'  => $name,
-			'_update'=> get_filetime($page),
-			'_past'  => get_filetime($page)
+			'_update'=> $page_filetime,
+			'_past'  => $page_filetime,
 		);
-		if ($this->rows[$name]['_match'] = preg_match("/{$this->pattern}/s",$source,$matches))
+		$links = array();
+		if ($row['_match'] = preg_match("/{$this->pattern}/s",$source,$matches))
 		{
 			array_shift($matches);
 			foreach ($this->pattern_fields as $key=>$field)
 			{
-				$this->rows[$name][$field] = trim($matches[$key]);
+				$row[$field] = trim($matches[$key]);
+				if ($field === '_refer') {
+					continue;
+				}
+				$lmatch = null;
+				if (preg_match('/\[\[([^\]\]]+)\]/', $row[$field], $lmatch)) {
+					$link = $lmatch[1];
+					if (is_pagename($link) && $link !== $this->page && $link !== $page) {
+						if (!in_array($link, $links)) {
+							$links[] = $link;
+						}
+					}
+				}
 			}
 		}
+		$row['_links'] = $links;
+		$this->rows[$name] = $row;
 	}
 	function compare($a, $b)
 	{
@@ -836,8 +1142,6 @@ class Tracker_list
 	}
 	function replace_title($arr)
 	{
-		global $script;
-
 		$field = $sort = $arr[1];
 		if ($sort == '_name' or $sort == '_page')
 		{
@@ -875,9 +1179,10 @@ class Tracker_list
 				$_order[] = "$key:$value";
 		$r_order = rawurlencode(join(';',$_order));
 
+		$script = get_base_uri(PKWK_URI_ABSOLUTE);
 		return "[[$title$arrow>$script?plugin=tracker_list&refer=$r_page&config=$r_config&list=$r_list&order=$r_order]]";
 	}
-	function toString($limit=NULL)
+	function toString($limit=NULL,$start_n=NULL,$last_n=NULL)
 	{
 		global $_tracker_messages;
 
@@ -891,6 +1196,15 @@ class Tracker_list
 				array(count($this->rows),$limit),
 				$_tracker_messages['msg_limit'])."\n";
 			$this->rows = array_splice($this->rows,0,$limit);
+		} else if (!is_null($start_n) && !is_null($last_n)) {
+			// sublist (range "start-last")
+			$sublist = array();
+			foreach ($this->rows as $row) {
+				if ($start_n <= $row['_real'] && $row['_real'] <= $last_n) {
+					$sublist[] = $row;
+				}
+			}
+			$this->rows = $sublist;
 		}
 		if (count($this->rows) == 0)
 		{
@@ -918,7 +1232,7 @@ class Tracker_list
 			{
 				if (trim($line) == '')
 				{
-					$source .= $line;
+					// Ignore empty line
 					continue;
 				}
 				$this->pipe = ($line{0} == '|' or $line{0} == ':');
@@ -931,9 +1245,11 @@ class Tracker_list
 function plugin_tracker_get_source($page)
 {
 	$source = get_source($page);
-	// 見出しの固有ID部を削除
-	$source = preg_replace('/^(\*{1,3}.*)\[#[A-Za-z][\w-]+\](.*)$/m','$1$2',$source);
-	// #freezeを削除
-	return preg_replace('/^#freeze\s*$/im', '', $source);
+	// Delete anchor part of Headings (Example: "*Heading1 [#id] AAA" to "*Heading1 AAA")
+	$s2 = preg_replace('/^(\*{1,3}.*)\[#[A-Za-z][\w-]+\](.*)$/m','$1$2',$source);
+	// Delete #freeze
+	$s3 = preg_replace('/^#freeze\s*$/im', '', $s2);
+	// Delete #author line
+	$s4 = preg_replace('/^#author\b[^\r\n]*$/im', '', $s3);
+	return $s4;
 }
-

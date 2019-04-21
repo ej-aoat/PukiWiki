@@ -1,7 +1,8 @@
 <?php
-// $Id: dump.inc.php,v 1.41 2007/11/03 15:17:52 henoheno Exp $
-// Copyright (C)
-//   2004-2007 PukiWiki Developers Team
+// PukiWiki - Yet another WikiWikiWeb clone
+// dump.inc.php
+// Copyright
+//   2004-2017 PukiWiki Development Team
 //   2004      teanan / Interfair Laboratory
 // License: GPL v2 or (at your option) any later version
 //
@@ -203,6 +204,11 @@ function download_tarfile($tempnam, $arc_kind)
 	header('Content-Length: ' . $size);
 	header('Content-Type: application/octet-stream');
 	header('Pragma: no-cache');
+	// Disable output bufferring
+	while (ob_get_level()) {
+		ob_end_flush();
+	}
+	flush();
 	@readfile($tempnam);
 }
 
@@ -210,8 +216,9 @@ function download_tarfile($tempnam, $arc_kind)
 // 入力フォームを表示
 function plugin_dump_disp_form()
 {
-	global $script, $defaultpage;
+	global $defaultpage;
 
+	$script   = get_base_uri();
 	$act_down = PLUGIN_DUMP_DUMP;
 	$act_up   = PLUGIN_DUMP_RESTORE;
 	$maxsize  = PLUGIN_DUMP_MAX_FILESIZE;
@@ -330,8 +337,10 @@ class tarlib
 	var $arc_kind;
 	var $dummydata;
 
-	// コンストラクタ
 	function tarlib() {
+		$this->__construct();
+	}
+	function __construct() {
 		$this->filename = '';
 		$this->fp       = FALSE;
 		$this->status   = TARLIB_STATUS_INIT;
@@ -712,6 +721,4 @@ class tarlib
 
 		$this->status = TARLIB_STATUS_INIT;
 	}
-
 }
-?>

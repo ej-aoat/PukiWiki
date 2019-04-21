@@ -1,15 +1,13 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
 // amazon.inc.php
+// Copyright
+//	2004-2017 PukiWiki Development Team
+//	2003 閑舎 <raku@rakunet.org> (Original author)
+// License: GPL v2 or (at your option) any later version
 //
 // Amazon plugin: Book-review maker via amazon.com/amazon.jp
-//
-// Copyright:
-//	2004-2016 PukiWiki Development Team
-//	2003 閑舎 <raku@rakunet.org> (Original author)
-//
-// License: GNU/GPL
-//
+
 // ChangeLog:
 // * 2004/04/03 PukiWiki Developer Team (arino <arino@users.osdn.me>)
 //        - replace plugin_amazon_get_page().
@@ -112,8 +110,9 @@ EOD;
 
 function plugin_amazon_convert()
 {
-	global $script, $vars, $asin, $asin_all;
+	global $vars, $asin, $asin_all;
 
+	$script = get_base_uri();
 	if (func_num_args() > 3) {
 		if (PKWK_READONLY) return ''; // Show nothing
 
@@ -187,7 +186,7 @@ EOD;
 
 function plugin_amazon_action()
 {
-	global $vars, $script, $edit_auth, $edit_auth_users;
+	global $vars, $edit_auth, $edit_auth_users;
 	global $amazon_body, $asin, $asin_all;
 
 	if (PKWK_READONLY) die_message('PKWK_READONLY prohibits editing');
@@ -211,17 +210,17 @@ function plugin_amazon_action()
 		if ($edit_auth && ($auth_user == '' || ! isset($edit_auth_users[$auth_user]) ||
 		    $edit_auth_users[$auth_user] != $_SERVER['PHP_AUTH_PW'])) {
 		    	// Edit-auth failed. Just look the page
-			header('Location: ' . get_script_uri() . '?' . $r_page_url);
+			header('Location: ' . get_page_uri($r_page, PKWK_URI_ROOT));
 		} else {
 			$title = plugin_amazon_get_asin_title();
 			if ($title == '' || preg_match('#^/#', $s_page)) {
 				// Invalid page name
-				header('Location: ' . get_script_uri() . '?' . pagename_urlencode($s_page));
+				header('Location: ' . get_page_uri($s_page, PKWK_URI_ROOT));
 			} else {
 				$body = '#amazon(' . $asin_all . ',,image)' . "\n" .
 					'*' . $title . "\n" . $amazon_body;
 				plugin_amazon_review_save($r_page, $body);
-				header('Location: ' . get_script_uri() .
+				header('Location: ' . get_base_uri(PKWK_URI_ROOT) .
 					'?cmd=edit&page=' . $r_page_url);
 			}
 		}

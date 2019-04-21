@@ -1,81 +1,57 @@
-<?php
-// PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: pukiwiki.css.php,v 1.12 2005/10/12 13:06:27 henoheno Exp $
-// Copyright (C)
-//   2002-2005 PukiWiki Developers Team
-//   2001-2002 Originally written by yu-ji
-// License: GPL v2 or (at your option) any later version
-//
-// Default CSS
+@charset "UTF-8";
 
-// Send header
-header('Content-Type: text/css');
-$matches = array();
-if(ini_get('zlib.output_compression') && preg_match('/\b(gzip|deflate)\b/i', $_SERVER['HTTP_ACCEPT_ENCODING'], $matches)) {
-	header('Content-Encoding: ' . $matches[1]);
-	header('Vary: Accept-Encoding');
+/*!
+ * PukiWiki - Yet another WikiWikiWeb clone.
+ * Copyright
+ *   2002-2017 PukiWiki Development Team
+ *   2001-2002 Originally written by yu-ji
+ * License: GPL v2 or (at your option) any later version
+ *
+ * Default CSS
+ */
+
+pre, dl, ol, p, blockquote {
+  line-height:130%;
 }
-
-// Default charset
-$charset = isset($_GET['charset']) ? $_GET['charset']  : '';
-switch ($charset) {
-	case 'Shift_JIS': break; /* this @charset is for Mozilla's bug */
-	default: $charset ='iso-8859-1';
+blockquote {
+  margin-left:32px;
 }
-
-// Media
-$media   = isset($_GET['media'])   ? $_GET['media']    : '';
-if ($media != 'print') $media = 'screen';
-
-// Output CSS ----
-?>
-@charset "<?php echo $charset ?>";
-
-pre, dl, ol, p, blockquote { line-height:130%; }
-
-blockquote { margin-left:32px; }
-
 body,td {
-	color:black;
-	background-color:white;
-	font-size:90%;
-	font-family:verdana, arial, helvetica, Sans-Serif;
+  color:black;
+  background-color:white;
+/*  margin-left:2%;  */
+/*  margin-right:2%; */
+  font-size:90%;
+  font-family:verdana, arial, helvetica, Sans-Serif;
 }
 
 a:link {
-<?php	if ($media == 'print') { ?>
-	text-decoration: underline;
-<?php	} else { ?>
-	color:#215dc6;
-	background-color:inherit;
-	text-decoration:none;
-<?php	} ?>
+  color:#215dc6;
+  background-color:inherit;
+  text-decoration:none;
 }
-
 a:active {
-	color:#215dc6;
-	background-color:#CCDDEE;
-	text-decoration:none;
+  color:#215dc6;
+  background-color:#CCDDEE;
+  text-decoration:none;
 }
-
 a:visited {
-<?php	if ($media == 'print') { ?>
-	text-decoration: underline;
-<?php	} else { ?>
-	color:#a63d21;
-	background-color:inherit;
-	text-decoration:none;
-<?php	} ?>
+  color:#a63d21;
+  background-color:inherit;
+  text-decoration:none;
 }
-
 a:hover {
-	color:#215dc6;
-	background-color:#CCDDEE;
-	text-decoration:underline;
+  color:#215dc6;
+  background-color:#CCDDEE;
+  text-decoration:underline;
+}
+a.external-link:not(.external-link-silent)::after {
+  content:url(../image/external-link.png);
+  margin:3px;
 }
 
 h1, h2 {
-	font-family:verdana, arial, helvetica, Sans-Serif;
+font-family:verdana, arial, helvetica, Sans-Serif;
 	font-size: 150%;
 	color: #ff8c1a;
 	padding:.3em;
@@ -340,365 +316,339 @@ strong.word9 {
 }
 
 /* html.php/edit_form() */
-.edit_form { clear:both; }
+.edit_form {
+  clear:both;
+}
 
 /* pukiwiki.skin.php */
 div#header {
-	padding:0px;
-	margin:0px;
+  padding:0px;
+  margin:0px;
 }
 
 div#navigator {
-<?php   if ($media == 'print') { ?>
-	display:none;
-<?php   } else { ?>
-	clear:both;
-	padding:4px 0px 0px 0px;
-	margin:0px;
-<?php   } ?>
+  clear:both;
+  padding:4px 0px 0px 0px;
+  margin:0px;
 }
 
 td.menubar {
-<?php   if ($media == 'print') { ?>
-	display:none;
-<?php   } else { ?>
-	width:9em;
-	vertical-align:top;
-<?php   } ?>
+  width:9em;
+  vertical-align:top;
 }
 
 div#menubar {
-<?php   if ($media == 'print') { ?>
-	display:none;
-<?php   } else { ?>
-	width: auto;
-	padding:0px;
-	margin:4px;
-	word-break:break-all;
-	font-size:90%;
-	overflow:hidden;
-<?php   } ?>
+  width:auto;
+  padding:0px;
+  margin:4px;
+  word-break:break-all;
+  font-size:90%;
+  overflow:hidden;
 }
-
 div#menubar ul {
-	margin:0px 0px 0px .5em;
-	padding:0px 0px 0px .5em;
+  margin:0px 0px 0px .5em;
+  padding:0px 0px 0px .5em;
 }
-
 div#menubar ul li {
-	line-height:1.5;
-	list-style-type: none;
+  line-height:110%;
 }
-
-div#menubar h2 {
-	margin-top: 0.5em;
-	font-size: 100%;
-}
-
-div#menubar h3 {
-	margin-top: 0.5em;
-	font-size: 100%;
-}
-
 div#menubar h4 {
-	margin-top: 0.5em;
-	font-size:100%;
-}
-
-div#menubar h5 {
-	font-size: 100%;
-	margin-top: 0.5em;
-}
-
-div#menubar a:hover {
-	color: #215dc6;
+  font-size:110%;
 }
 
 div#body {
-	padding:0px;
-	margin:0px 0px 0px .5em;
+  padding:0px;
+  margin:0px 0px 0px .5em;
 }
-
 div#note {
-	clear:both;
-	padding:0px;
-	margin:0px;
+  clear:both;
+  padding:0px;
+  margin:0px;
 }
-
 div#attach {
-<?php   if ($media == 'print') { ?>
-	display:none;
-<?php   } else { ?>
-	clear:both;
-	padding:0px;
-	margin:0px;
-<?php   } ?>
+  clear:both;
+  padding:0px;
+  margin:0px;
 }
-
 div#toolbar {
-<?php   if ($media == 'print') { ?>
-        display:none;
-<?php   } else { ?>
-	clear:both;
-	padding:0px;
-	margin:0px;
-	text-align:right;
-<?php   } ?>
+  clear:both;
+  padding:0px;
+  margin:0px;
+  text-align:right;
 }
-
 div#lastmodified {
-	font-size:80%;
-	padding:0px;
-	margin:0px;
+  font-size:80%;
+  padding:0px;
+  margin:0px;
 }
-
 div#related {
-<?php   if ($media == 'print') { ?>
-        display:none;
-<?php   } else { ?>
-	font-size:80%;
-	padding:0px;
-	margin:16px 0px 0px 0px;
-<?php   } ?>
+  font-size:80%;
+  padding:0px;
+  margin:16px 0px 0px 0px;
 }
-
+div#related .page_passage {
+  font-size:60%;
+}
 div#footer {
-	font-size:70%;
-	padding:0px;
-	margin:16px 0px 0px 0px;
+  font-size:70%;
+  padding:0px;
+  margin:16px 0px 0px 0px;
 }
-
 div#banner {
-	float:right;
-	margin-top:24px;
+  float:right;
+  margin-top:24px;
 }
-
 div#preview {
-	color:inherit;
-	background-color:#F5F8FF;
+  color:inherit;
+  background-color:#F5F8FF;
 }
-
 img#logo {
-<?php   if ($media == 'print') { ?>
-	display:none;
-<?php   } else { ?>
-	float:left;
-	margin-right:20px;
-<?php   } ?>
+  float:left;
+  margin-right:20px;
 }
 
 /* aname.inc.php */
-.anchor {}
 .anchor_super {
-	font-size:xx-small;
-	vertical-align:super;
+  font-size:xx-small;
+  vertical-align:super;
 }
 
-/* br.inc.php */
-br.spacer {}
+/* list.inc.php */
+.page_passage {
+  font-size:small;
+}
 
 /* calendar*.inc.php */
 .style_calendar {
-	padding:0px;
-	border:0px;
-	margin:3px;
-	color:inherit;
-	background-color:#CCD5DD;
-	text-align:center;
+  padding:0px;
+  border:0px;
+  margin:3px;
+  color:inherit;
+  background-color:#CCD5DD;
+  text-align:center;
 }
 .style_td_caltop {
-	padding:5px;
-	margin:1px;
-	color:inherit;
-	background-color:#EEF5FF;
-	font-size:80%;
-	text-align:center;
+  padding:5px;
+  margin:1px;
+  color:inherit;
+  background-color:#EEF5FF;
+  font-size:80%;
+  text-align:center;
 }
 .style_td_today {
-	padding:5px;
-	margin:1px;
-	color:inherit;
-	background-color:#FFFFDD;
-	text-align:center;
+  padding:5px;
+  margin:1px;
+  color:inherit;
+  background-color:#FFFFDD;
+  text-align:center;
 }
 .style_td_sat {
-	padding:5px;
-	margin:1px;
-	color:inherit;
-	background-color:#DDE5FF;
-	text-align:center;
+  padding:5px;
+  margin:1px;
+  color:inherit;
+  background-color:#DDE5FF;
+  text-align:center;
 }
 .style_td_sun {
-	padding:5px;
-	margin:1px;
-	color:inherit;
-	background-color:#FFEEEE;
-	text-align:center;
+  padding:5px;
+  margin:1px;
+  color:inherit;
+  background-color:#FFEEEE;
+  text-align:center;
 }
 .style_td_blank {
-	padding:5px;
-	margin:1px;
-	color:inherit;
-	background-color:#EEF5FF;
-	text-align:center;
+  padding:5px;
+  margin:1px;
+  color:inherit;
+  background-color:#EEF5FF;
+  text-align:center;
 }
 .style_td_day {
-	padding:5px;
-	margin:1px;
-	color:inherit;
-	background-color:#EEF5FF;
-	text-align:center;
+  padding:5px;
+  margin:1px;
+  color:inherit;
+  background-color:#EEF5FF;
+  text-align:center;
 }
 .style_td_week {
-	padding:5px;
-	margin:1px;
-	color:inherit;
-	background-color:#DDE5EE;
-	font-size:80%;
-	font-weight:bold;
-	text-align:center;
+  padding:5px;
+  margin:1px;
+  color:inherit;
+  background-color:#DDE5EE;
+  font-size:80%;
+  font-weight:bold;
+  text-align:center;
 }
 
 /* calendar_viewer.inc.php */
 div.calendar_viewer {
-	color:inherit;
-	background-color:inherit;
-	margin-top:20px;
-	margin-bottom:10px;
-	padding-bottom:10px;
+  color:inherit;
+  background-color:inherit;
+  margin-top:20px;
+  margin-bottom:10px;
+  padding-bottom:10px;
 }
 span.calendar_viewer_left {
-	color:inherit;
-	background-color:inherit;
-	float:left;
+  color:inherit;
+  background-color:inherit;
+  float:left;
 }
 span.calendar_viewer_right {
-	color:inherit;
-	background-color:inherit;
-	float:right;
+  color:inherit;
+  background-color:inherit;
+  float:right;
 }
 
 /* clear.inc.php */
 .clear {
-	margin:0px;
-	clear:both;
+  margin:0px;
+  clear:both;
 }
 
 /* counter.inc.php */
-div.counter { font-size:70%; }
+div.counter {
+  font-size:70%;
+}
 
 /* diff.inc.php */
 span.diff_added {
-	color:blue;
-	background-color:inherit;
+  color:blue;
+  background-color:inherit;
 }
-
 span.diff_removed {
-	color:red;
-	background-color:inherit;
+  color:red;
+  background-color:inherit;
 }
 
 /* hr.inc.php */
 hr.short_line {
-	text-align:center;
-	width:80%;
-	border-style:solid;
-	border-color:#333333;
-	border-width:1px 0px;
+  text-align:center;
+  width:80%;
+  border-style:solid;
+  border-color:#333333;
+  border-width:1px 0px;
 }
 
 /* include.inc.php */
-h5.side_label { text-align:center; }
+h5.side_label {
+  text-align:center;
+}
 
 /* navi.inc.php */
 ul.navi {
-	margin:0px;
-	padding:0px;
-	text-align:center;
+  margin:0px;
+  padding:0px;
+  text-align:center;
 }
 li.navi_none {
-	display:inline;
-	float:none;
+  display:inline;
+  float:none;
 }
 li.navi_left {
-	display:inline;
-	float:left;
-	text-align:left;
+  display:inline;
+  text-align:left;
 }
 li.navi_right {
-	display:inline;
-	float:right;
-	text-align:right;
+  display:inline;
+  text-align:right;
 }
 
 /* new.inc.php */
-span.comment_date { font-size:x-small; }
+span.comment_date {
+  font-size:x-small;
+}
 span.new1 {
-	color:red;
-	background-color:transparent;
-	font-size:x-small;
+  color:red;
+  background-color:transparent;
+  font-size:x-small;
 }
 span.new5 {
-	color:green;
-	background-color:transparent;
-	font-size:xx-small;
+  color:green;
+  background-color:transparent;
+  font-size:xx-small;
 }
 
 /* popular.inc.php */
-span.counter { font-size:70%; }
-ul.popular_list {
-<?php
-/*
-	padding:0px;
-	border:0px;
-	margin:0px 0px 0px 1em;
-	word-wrap:break-word;
-	word-break:break-all;
-*/
-?>
-}
-
-/* recent.inc.php,showrss.inc.php */
-ul.recent_list {
-<?php
-/*
-	padding:0px;
-	border:0px;
-	margin:0px 0px 0px 1em;
-	word-wrap:break-word;
-	word-break:break-all;
-*/
-?>
+span.counter {
+  font-size:70%;
 }
 
 /* ref.inc.php */
 div.img_margin {
-	margin-left:32px;
-	margin-right:32px;
+  margin-left:32px;
+  margin-right:32px;
 }
 
 /* vote.inc.php */
 td.vote_label {
-	color:inherit;
-	background-color:#FFCCCC;
+  color:inherit;
+  background-color:#FFCCCC;
 }
 td.vote_td1 {
-	color:inherit;
-	background-color:#DDE5FF;
+  color:inherit;
+  background-color:#DDE5FF;
 }
 td.vote_td2 {
-	color:inherit;
-	background-color:#EEF5FF;
+  color:inherit;
+  background-color:#EEF5FF;
 }
 
 /* topicpath.inc.php */
-.breadcrumb {
-	padding: .35rem 1rem
+span.topicpath-slash {
+  margin:0 0.2em;
+}
+span.topicpath-top {
+  user-select:none;
 }
 
-.breadcrumb > li + li:before {
-	content: ">";
+/* bugtrack.inc.php */
+tr.bugtrack_list_header th {
+  background-color:#ffffcc;
 }
+tr.bugtrack_state_proposal td {
+  background-color:#ccccff;
+}
+tr.bugtrack_state_accept td {
+  background-color:#ffcc99;
+}
+tr.bugrack_state_resolved td {
+  background-color:#ccffcc;
+}
+tr.bugtrack_state_pending td {
+  background-color:#ffccff;
+}
+tr.bugtrack_state_cancel td {
+  background-color:#cccccc;
+}
+tr.bugtrack_state_undef td {
+  background-color:#ff3333;
+}
+
+/* search2.inc.php  */
+.search-result-page-summary {
+  font-size:70%;
+  color:gray;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@media print {
+  a:link,
+  a:visited {
+    text-decoration:underline;
+  }
+  img#logo,
+  div#navigator,
+  div#menubar,
+  td.menubar,
+  div#related,
+  div#attach,
+  div#toolbar {
+    display:none;
+  }
+}
+
 
 /* contentsx */
 div#body .toc {

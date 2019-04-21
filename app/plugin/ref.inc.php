@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-// $Id: ref.inc.php,v 1.51 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2002-2006 PukiWiki Developers Team
+// ref.inc.php
+// Copyright
+//   2002-2017 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -107,9 +107,10 @@ EOD;
 
 function plugin_ref_body($args)
 {
-	global $script, $vars;
+	global $vars;
 	global $WikiName, $BracketName; // compat
 
+	$script = get_base_uri();
 	// 戻り値
 	$params = array(
 		'left'   => FALSE, // 左寄せ
@@ -430,6 +431,11 @@ function plugin_ref_action()
 		.'"; filename*=utf-8\'\'' . rawurlencode($utf8filename));
 	header('Content-Length: ' . $size);
 	header('Content-Type: '   . $type);
+	// Disable output bufferring
+	while (ob_get_level()) {
+		ob_end_flush();
+	}
+	flush();
 	@readfile($ref);
 	exit;
 }

@@ -1,32 +1,12 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: pukiwiki.php,v 1.23 2011/01/25 15:01:01 henoheno Exp $
+// pukiwiki.php
+// Copyright
+//   2002-2016 PukiWiki Development Team
+//   2001-2002 Originally written by yu-ji
+// License: GPL v2 or (at your option) any later version
 //
-// PukiWiki 1.4.*
-//  Copyright (C) 2002-2005 by PukiWiki Development Team
-//  http://pukiwiki.osdn.jp/
-//
-// PukiWiki 1.3.*
-//  Copyright (C) 2002-2004 by PukiWiki Development Team
-//  http://pukiwiki.osdn.jp/
-//
-// PukiWiki 1.3 (Base)
-//  Copyright (C) 2001-2002 by yu-ji <sng@factage.com>
-//  http://factage.com/sng/pukiwiki/
-//
-// Special thanks
-//  YukiWiki by Hiroshi Yuki <hyuki@hyuki.com>
-//  http://www.hyuki.com/yukiwiki/
-//
-// This program is free software; you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation; either version 2 of the License, or
-// (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// PukiWiki main script
 
 if (! defined('DATA_HOME')) define('DATA_HOME', '');
 
@@ -63,12 +43,11 @@ if ($notify) {
 	require(LIB_DIR . 'mail.php'); // Mail notification
 }
 
-include_once(PLUGIN_DIR . 'paraedit.inc.php');
-$post["msg"] = _plugin_paraedit_parse_postmsg($post["msg_before"], $post["msg"], $post["msg_after"]);
-
 /////////////////////////////////////////////////
 // Main
-
+if (manage_page_redirect()) {
+	exit;
+}
 $retvars = array();
 $is_cmd = FALSE;
 if (isset($vars['cmd'])) {
@@ -111,6 +90,7 @@ if (isset($retvars['body']) && $retvars['body'] != '') {
 	$body = & $retvars['body'];
 } else {
 	if ($base == '' || ! is_page($base)) {
+		check_readable($defaultpage, true, true);
 		$base  = & $defaultpage;
 		$title = htmlsc(strip_bracket($base));
 		$page  = make_search($base);
@@ -119,9 +99,9 @@ if (isset($retvars['body']) && $retvars['body'] != '') {
 	$vars['cmd']  = 'read';
 	$vars['page'] = & $base;
 
+	prepare_display_materials();
 	$body  = convert_html(get_source($base));
 }
 
 // Output
 catbody($title, $page, $body);
-exit;

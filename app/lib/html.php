@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone.
 // html.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2019 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -11,12 +11,13 @@
 // Show page-content
 function catbody($title, $page, $body)
 {
-	global $script, $vars, $arg, $defaultpage, $whatsnew, $help_page, $hr;
+	global $vars, $arg, $defaultpage, $whatsnew, $help_page, $hr;
 	global $attach_link, $related_link, $cantedit, $function_freeze;
 	global $search_word_color, $_msg_word, $foot_explain, $note_hr, $head_tags;
 	global $javascript, $nofollow;
 	global $_LANG, $_LINK, $_IMAGE;
 	global $auth_type, $auth_user;
+	global $html_meta_referrer_policy;
 
 	global $pkwk_dtd;     // XHTML 1.1, XHTML1.0, HTML 4.01 Transitional...
 	global $page_title;   // Title of this site
@@ -24,9 +25,11 @@ function catbody($title, $page, $body)
 	global $modifier;     // Site administrator's  web page
 	global $modifierlink; // Site administrator's name
 
+	$script = get_base_uri();
 	$enable_login = false;
 	$enable_logout = false;
-	if (AUTH_TYPE_FORM === $auth_type || AUTH_TYPE_EXTERNAL === $auth_type) {
+	if (AUTH_TYPE_FORM === $auth_type || AUTH_TYPE_EXTERNAL === $auth_type ||
+		AUTH_TYPE_SAML === $auth_type) {
 		if ($auth_user) {
 			$enable_logout = true;
 		} else {
@@ -42,17 +45,11 @@ function catbody($title, $page, $body)
 
 	$_LINK = $_IMAGE = array();
 
-	// Add JavaScript header when ...
-	if (! PKWK_ALLOW_JAVASCRIPT) unset($javascript);
-
 	$_page  = isset($vars['page']) ? $vars['page'] : '';
 	$r_page = pagename_urlencode($_page);
-
+	$is_edit_preview = isset($vars['preview']);
 	// Canonical URL
-	$canonical_url = $script;
-	if ($_page !== $defaultpage) {
-		$canonical_url = $script . '?' . $r_page;
-	}
+	$canonical_url = get_page_uri($_page, PKWK_URI_ABSOLUTE);
 
 	// Set $_LINK for skin
 	$_LINK['add']      = "$script?cmd=add&amp;page=$r_page";
@@ -62,27 +59,30 @@ function catbody($title, $page, $body)
 	$_LINK['edit']     = "$script?cmd=edit&amp;page=$r_page";
 	$_LINK['filelist'] = "$script?cmd=filelist";
 	$_LINK['freeze']   = "$script?cmd=freeze&amp;page=$r_page";
-	$_LINK['help']     = "$script?" . pagename_urlencode($help_page);
+	$_LINK['help']     = get_page_uri($help_page);
 	$_LINK['list']     = "$script?cmd=list";
 	$_LINK['new']      = "$script?plugin=newpage&amp;refer=$r_page";
 	$_LINK['rdf']      = "$script?cmd=rss&amp;ver=1.0";
-	$_LINK['recent']   = "$script?" . pagename_urlencode($whatsnew);
-	$_LINK['reload']   = $canonical_url;
+	$_LINK['recent']   = get_page_uri($whatsnew);
+	$_LINK['reload']   = get_page_uri($_page);
 	$_LINK['rename']   = "$script?plugin=rename&amp;refer=$r_page";
 	$_LINK['rss']      = "$script?cmd=rss";
 	$_LINK['rss10']    = "$script?cmd=rss&amp;ver=1.0"; // Same as 'rdf'
 	$_LINK['rss20']    = "$script?cmd=rss&amp;ver=2.0";
 	$_LINK['search']   = "$script?cmd=search";
-	$_LINK['top']      = "$script?" . pagename_urlencode($defaultpage);
+	$_LINK['top']      = get_page_uri($defaultpage);
 	$_LINK['unfreeze'] = "$script?cmd=unfreeze&amp;page=$r_page";
 	$_LINK['upload']   = "$script?plugin=attach&amp;pcmd=upload&amp;page=$r_page";
+	$_LINK['canonical_url'] = $canonical_url;
 	$login_link = "#LOGIN_ERROR"; // dummy link that is not used
 	switch ($auth_type) {
 		case AUTH_TYPE_FORM:
 			$login_link = "$script?plugin=loginform&pcmd=login&page=$r_page";
 			break;
 		case AUTH_TYPE_EXTERNAL:
-			$login_link = get_auth_external_login_url($_page, $_LINK['reload']);
+		case AUTH_TYPE_SAML:
+			$login_link = get_auth_external_login_url($_page,
+				get_page_uri($_page, PKWK_URI_ROOT));
 			break;
 	}
 	$_LINK['login']    = htmlsc($login_link);
@@ -119,10 +119,11 @@ function catbody($title, $page, $body)
 
 	// Last modification date (string) of the page
 	$lastmodified = $is_read ?  format_date(get_filetime($_page)) .
-		' ' . get_pg_passage($_page, FALSE) : '';
+		get_passage_html_span($_page) : '';
 
 	// List of attached files to the page
-	$attaches = ($attach_link && $is_read && exist_plugin_action('attach')) ?
+	$show_attaches = $is_read || arg_check('edit');
+	$attaches = ($attach_link && $show_attaches && exist_plugin_action('attach')) ?
 		attach_filelist() : '';
 
 	// List of related pages
@@ -167,27 +168,26 @@ function catbody($title, $page, $body)
 		arsort($keys, SORT_NUMERIC);
 		$keys = get_search_words(array_keys($keys), TRUE);
 		$id = 0;
+		$patterns = '';
 		foreach ($keys as $key=>$pattern) {
-			$s_key    = htmlsc($key);
-			$pattern  = '/' .
+			if (strlen($patterns) > 0) {
+				$patterns .= '|';
+			}
+			$patterns .= '(' . $pattern . ')';
+		}
+		if ($pattern) {
+			$whole_pattern  = '/' .
 				'<textarea[^>]*>.*?<\/textarea>' .	// Ignore textareas
 				'|' . '<[^>]*>' .			// Ignore tags
 				'|' . '&[^;]+;' .			// Ignore entities
-				'|' . '(' . $pattern . ')' .		// $matches[1]: Regex for a search word
+				'|' . '(' . $patterns . ')' .		// $matches[1]: Regex for a search word
 				'/sS';
-			$decorate_Nth_word = create_function(
-				'$matches',
-				'return (isset($matches[1])) ? ' .
-					'\'<strong class="word' .
-						$id .
-					'">\' . $matches[1] . \'</strong>\' : ' .
-					'$matches[0];'
-			);
-			$body  = preg_replace_callback($pattern, $decorate_Nth_word, $body);
-			$notes = preg_replace_callback($pattern, $decorate_Nth_word, $notes);
-			++$id;
+			$body  = preg_replace_callback($whole_pattern, '_decorate_Nth_word', $body);
+			$notes = preg_replace_callback($whole_pattern, '_decorate_Nth_word', $notes);
 		}
 	}
+	// Embed Scripting data
+	$html_scripting_data = get_html_scripting_data($_page, $is_edit_preview);
 
 	// Compat: 'HTML convert time' without time about MenuBar and skin
 	$taketime = elapsedtime();
@@ -195,20 +195,151 @@ function catbody($title, $page, $body)
 	require(SKIN_FILE);
 }
 
+function _decorate_Nth_word($matches)
+{
+	// $matches[0]: including both words to skip and to decorate
+	// $matches[1]: word to decorate
+	// $matches[2+]: indicates which keyword to decorate
+	$index = -1;
+	for ($i = 2; $i < count($matches); $i++) {
+		if (isset($matches[$i]) && $matches[$i]) {
+			$index = $i - 2;
+			break;
+		}
+	}
+	if (isset($matches[1])) {
+		// wordN highlight class: N=0...n
+		return '<strong class="word' . $index . '">' .
+			$matches[0] . '</strong>';
+	}
+	return $matches[0];
+}
+
+/**
+ * Get data used by JavaScript modules
+ *
+ * @param $page page name
+ * @param $in_editing true if preview in editing
+ */
+function get_html_scripting_data($page, $in_editing)
+{
+	global $ticket_link_sites, $plugin;
+	global $external_link_cushion_page, $external_link_cushion;
+	global $topicpath_title;
+	global $ticket_jira_default_site;
+	if (!isset($ticket_link_sites) || !is_array($ticket_link_sites)) {
+		return '';
+	}
+	$is_utf8 = (bool)defined('PKWK_UTF8_ENABLE');
+	// Require: PHP 5.4+
+	$json_enabled = defined('JSON_UNESCAPED_UNICODE');
+	if (!$json_enabled) {
+		$empty_data = <<<EOS
+<div id="pukiwiki-site-properties" style="display:none;">
+</div>
+EOS;
+		return $empty_data;
+	}
+	// Site basic Properties
+	$props = array(
+		'is_utf8' => $is_utf8,
+		'json_enabled' => $json_enabled,
+		'base_uri_pathname' => get_base_uri(PKWK_URI_ROOT),
+		'base_uri_absolute' => get_base_uri(PKWK_URI_ABSOLUTE)
+	);
+	$h_props = htmlsc_json($props);
+	$site_props = <<<EOS
+<input type="hidden" class="site-props" value="$h_props" />
+EOS;
+	$h_plugin = htmlsc($plugin);
+	$plugin_prop = <<<EOS
+<input type="hidden" class="plugin-name" value="$h_plugin" />
+EOS;
+	// Page name
+	$h_page_name = htmlsc($page);
+	$page_name_data = <<<EOS
+<input type="hidden" class="page-name" value="$h_page_name" />
+EOS;
+	// Page is editing (preview)
+	$in_editing_value = ($plugin === 'edit' && $in_editing) ? 'true' : 'false';
+	$page_edit_data = <<<EOS
+<input type="hidden" class="page-in-edit" value="$in_editing_value" />
+EOS;
+	// AutoTicketLink
+	$filtered_ticket_link_sites = array();
+	foreach ($ticket_link_sites as $s) {
+		if (!preg_match('/^([a-zA-Z0-9]+)([\.\-][a-zA-Z0-9]+)*$/', $s['key'])) {
+			continue;
+		}
+		array_push($filtered_ticket_link_sites, $s);
+	}
+	$h_ticket_link_sites = htmlsc_json($filtered_ticket_link_sites);
+	$ticketlink_data = <<<EOS
+<input type="hidden" class="ticketlink-def" value="$h_ticket_link_sites" />
+EOS;
+	// AutoTicketLink - JIRA
+	$ticket_jira_projects = get_ticketlink_jira_projects();
+	$ticketlink_jira_data = '';
+	if (count($ticket_jira_projects) > 0) {
+		$h_ticket_jira_projects = htmlsc_json($ticket_jira_projects);
+		$ticketlink_jira_data = <<<EOS
+<input type="hidden" class="ticketlink-jira-def" value="$h_ticket_jira_projects" />
+EOS;
+	}
+	$ticketlink_jira_default_data = '';
+	if (isset($ticket_jira_default_site) && is_array($ticket_jira_default_site)) {
+		$h_ticket_jira_default_site = htmlsc_json($ticket_jira_default_site);
+		$ticketlink_jira_default_data = <<<EOS
+<input type="hidden" class="ticketlink-jira-default-def" value="$h_ticket_jira_default_site" />
+EOS;
+	}
+	// External link cushion page
+	$external_link_cushion_data = '';
+	if ($external_link_cushion_page) {
+		$h_cushion = htmlsc_json($external_link_cushion);
+		$external_link_cushion_data = <<<EOS
+<input type="hidden" class="external-link-cushion" value="$h_cushion" />
+EOS;
+	}
+	// Topicpath title
+	$topicpath_data = '';
+	if ($topicpath_title && exist_plugin('topicpath')) {
+		$parents = plugin_topicpath_parent_links($page);
+		$h_topicpath = htmlsc_json($parents);
+		$topicpath_data = <<<EOS
+<input type="hidden" class="topicpath-links" value="$h_topicpath" />
+EOS;
+	}
+	$data = <<<EOS
+<div id="pukiwiki-site-properties" style="display:none;">
+$site_props
+$plugin_prop
+$page_name_data
+$page_edit_data
+$ticketlink_data
+$ticketlink_jira_data
+$ticketlink_jira_default_data
+$external_link_cushion_data
+$topicpath_data
+</div>
+EOS;
+	return $data;
+}
+
 // Show 'edit' form
 function edit_form($page, $postdata, $digest = FALSE, $b_template = TRUE)
 {
-	global $script, $vars, $rows, $cols, $hr, $function_freeze;
+	global $vars, $rows, $cols;
 	global $_btn_preview, $_btn_repreview, $_btn_update, $_btn_cancel, $_msg_help;
-	global $whatsnew, $_btn_template, $_btn_load, $load_template_func;
+	global $_btn_template, $_btn_load, $load_template_func;
 	global $notimeupdate;
-	global $_title_list, $_label_template_pages;
+	global $_msg_edit_cancel_confirm, $_msg_edit_unloadbefore_message;
+	global $rule_page;
 
+	$script = get_base_uri();
 	// Newly generate $digest or not
 	if ($digest === FALSE) $digest = md5(join('', get_source($page)));
-
 	$refer = $template = '';
- 
  	// Add plugin
 	$addtag = $add_top = '';
 	if(isset($vars['add'])) {
@@ -221,56 +352,22 @@ function edit_form($page, $postdata, $digest = FALSE, $b_template = TRUE)
 				'<span class="small">' . $_btn_addtop . '</span>' .
 			'</label>';
 	}
-
 	if($load_template_func && $b_template) {
-		$tpage_names = array(); // Pages marked as template
-		$template_page = ':config/Templates';
-		$page_max = 100;
-		foreach(get_source($template_page) as $_templates) {
-			$m = array();
-			if (! preg_match('#\-\s*\[\[([^\[\]]+)\]\]#', $_templates, $m)) continue;
-			$tpage = preg_replace('#^./#', "$template_page/", $m[1]);
-			if (! is_page($tpage)) continue;
-			$tpage_names[] = $tpage;
-		}
-		$page_names = array();
-		foreach(get_existpages() as $_page) {
-			if ($_page == $whatsnew || check_non_list($_page))
-				continue;
-			if (preg_match('/template/i', $_page)) {
-				$tpage_names[] = $_page;
-			} else {
-				if (count($page_names) >= $page_max) continue;
-				$page_names[] = $_page;
-			}
-		}
-		$tpage_names2 = array_values(array_unique($tpage_names));
-		natcasesort($tpage_names2);
-		natcasesort($page_names);
+		$template_page_list = get_template_page_list();
 		$tpages = array(); // Template pages
-		$npages = array(); // Normal pages
-		foreach($tpage_names2 as $p) {
+		foreach($template_page_list as $p) {
 			$ps = htmlsc($p);
 			$tpages[] = '   <option value="' . $ps . '">' . $ps . '</option>';
 		}
-		foreach($page_names as $p) {
-			$ps = htmlsc($p);
-			$npages[] = '   <option value="' . $ps . '">' . $ps . '</option>';
+		if (count($template_page_list) > 0) {
+			$s_tpages = join("\n", $tpages);
+		} else {
+			$s_tpages = '   <option value="">(no template pages)</option>';
 		}
-		if (count($page_names) === $page_max) {
-			$npages[] = '   <option value="">...</option>';
-		}
-		$s_tpages  = join("\n", $tpages);
-		$s_npages  = join("\n", $npages);
 		$template = <<<EOD
   <select name="template_page">
    <option value="">-- $_btn_template --</option>
-   <optgroup label="$_label_template_pages">
 $s_tpages
-   </optgroup>
-   <optgroup label="$_title_list">
-$s_npages
-   </optgroup>
   </select>
   <input type="submit" name="template" value="$_btn_load" accesskey="r" />
   <br />
@@ -308,14 +405,18 @@ EOD;
 
 	// 'margin-bottom', 'float:left', and 'margin-top'
 	// are for layout of 'cancel button'
+	$h_msg_edit_cancel_confirm = htmlsc($_msg_edit_cancel_confirm);
+	$h_msg_edit_unloadbefore_message = htmlsc($_msg_edit_unloadbefore_message);
 	$body = <<<EOD
 <div class="edit_form">
- <form action="$script" method="post" style="margin-bottom:0px;">
+ <form action="$script" method="post" class="_plugin_edit_edit_form" style="margin-bottom:0px;">
 $template
   $addtag
   <input type="hidden" name="cmd"    value="edit" />
   <input type="hidden" name="page"   value="$s_page" />
   <input type="hidden" name="digest" value="$s_digest" />
+  <input type="hidden" id="_msg_edit_cancel_confirm" value="$h_msg_edit_cancel_confirm" />
+  <input type="hidden" id="_msg_edit_unloadbefore_message" value="$h_msg_edit_unloadbefore_message" />
   <textarea name="msg" rows="$rows" cols="$cols">$s_postdata</textarea>
   <br />
   <div style="float:left;">
@@ -326,7 +427,7 @@ $template
   </div>
   <textarea name="original" rows="1" cols="1" style="display:none">$s_original</textarea>
  </form>
- <form action="$script" method="post" style="margin-top:0px;">
+ <form action="$script" method="post" class="_plugin_edit_cancel" style="margin-top:0px;">
   <input type="hidden" name="cmd"    value="edit" />
   <input type="hidden" name="page"   value="$s_page" />
   <input type="submit" name="cancel" value="$_btn_cancel" accesskey="c" />
@@ -334,23 +435,60 @@ $template
 </div>
 EOD;
 
-	if (isset($vars['help'])) {
-		$body .= $hr . catrule();
-	} else {
-		$body .= '<ul><li><a href="' .
-			$script . '?cmd=edit&amp;help=true&amp;page=' . $r_page .
-			'">' . $_msg_help . '</a></li></ul>';
-	}
-
+	$body .= '<ul><li><a href="' .
+		get_page_uri($rule_page) .
+		'" target="_blank">' . $_msg_help . '</a></li></ul>';
 	return $body;
+}
+
+/**
+ * Get template page list.
+ */
+function get_template_page_list()
+{
+	global $whatsnew;
+	$tpage_names = array(); // Pages marked as template
+	$template_page = ':config/Templates';
+	$page_max = 100;
+	foreach(get_source($template_page) as $_templates) {
+		$m = array();
+		if (! preg_match('#\-\s*\[\[([^\[\]]+)\]\]#', $_templates, $m)) continue;
+		$tpage = preg_replace('#^./#', "$template_page/", $m[1]);
+		if (! is_page($tpage)) continue;
+		$tpage_names[] = $tpage;
+	}
+	$page_names = array();
+	$page_list = get_existpages();
+	if (count($page_list) > $page_max) {
+		// Extract only template name pages
+		$target_pages = array();
+		foreach ($page_list as $_page) {
+			if (preg_match('/template/i', $_page)) {
+				$target_pages[] = $_page;
+			}
+		}
+	} else {
+		$target_pages = $page_list;
+	}
+	foreach ($target_pages as $_page) {
+		if ($_page == $whatsnew || check_non_list($_page) ||
+			!is_page_readable($_page)) {
+			continue;
+		}
+		$tpage_names[] = $_page;
+	}
+	$tempalte_page_list = array_values(array_unique($tpage_names));
+	natcasesort($tempalte_page_list);
+	return $tempalte_page_list;
 }
 
 // Related pages
 function make_related($page, $tag = '')
 {
-	global $script, $vars, $rule_related_str, $related_str;
-	global $_ul_left_margin, $_ul_margin, $_list_pad_str;
+	global $vars, $rule_related_str, $related_str;
 
+	$script = get_base_uri();
+	prepare_links_related($page);
 	$links = links_get_related($page);
 
 	if ($tag) {
@@ -362,21 +500,23 @@ function make_related($page, $tag = '')
 	$_links = array();
 	foreach ($links as $page=>$lastmod) {
 		if (check_non_list($page)) continue;
-
-		$r_page   = pagename_urlencode($page);
+		$page_uri = get_page_uri($page);
 		$s_page   = htmlsc($page);
-		$passage  = get_passage($lastmod);
-		$_links[] = $tag ?
-			'<a href="' . $script . '?' . $r_page . '" title="' .
-			$s_page . ' ' . $passage . '">' . $s_page . '</a>' :
-			'<a href="' . $script . '?' . $r_page . '">' .
-			$s_page . '</a>' . $passage;
+		if ($tag) {
+			$attrs = get_page_link_a_attrs($page);
+			$_links[] = '<a href="' . $page_uri . '" class="' .
+				$attrs['class'] . '" data-mtime="' . $attrs['data_mtime'] .
+				'">' . $s_page . '</a>';
+		} else {
+			$mtime_span = get_passage_mtime_html_span($lastmod + LOCALZONE);
+			$_links[] = '<a href="' . $page_uri . '">' .
+			$s_page . '</a>' . $mtime_span;
+		}
 	}
 	if (empty($_links)) return ''; // Nothing
 
 	if ($tag == 'p') { // From the line-head
-		$margin = $_ul_left_margin + $_ul_margin;
-		$style  = sprintf($_list_pad_str, 1, $margin, $margin);
+		$style  = sprintf(pkwk_list_attrs_template(), 1, 1);
 		$retval =  "\n" . '<ul' . $style . '>' . "\n" .
 			'<li>' . join($rule_related_str, $_links) . '</li>' . "\n" .
 			'</ul>' . "\n";
@@ -389,6 +529,11 @@ function make_related($page, $tag = '')
 	return $retval;
 }
 
+function _convert_line_rule_to_regex($a)
+{
+	return '/' . $a . '/';
+}
+
 // User-defined rules (convert without replacing source)
 function make_line_rules($str)
 {
@@ -396,8 +541,7 @@ function make_line_rules($str)
 	static $pattern, $replace;
 
 	if (! isset($pattern)) {
-		$pattern = array_map(create_function('$a',
-			'return \'/\' . $a . \'/\';'), array_keys($line_rules));
+		$pattern = array_map('_convert_line_rule_to_regex', array_keys($line_rules));
 		$replace = array_values($line_rules);
 		unset($line_rules);
 	}
@@ -436,12 +580,9 @@ function strip_autolink($str)
 // Make a backlink. searching-link of the page name, by the page name, for the page name
 function make_search($page)
 {
-	global $script;
-
 	$s_page = htmlsc($page);
 	$r_page = rawurlencode($page);
-
-	return '<a href="' . $script . '?plugin=related&amp;page=' . $r_page .
+	return '<a href="' . get_base_uri() . '?plugin=related&amp;page=' . $r_page .
 		'">' . $s_page . '</a> ';
 }
 
@@ -453,11 +594,11 @@ function make_heading(& $str, $strip = TRUE)
 	// Cut fixed-heading anchors
 	$id = '';
 	$matches = array();
-	if (preg_match('/^(\*{0,5})(.*?)\[#([A-Za-z][\w-]+)\](.*?)$/m', $str, $matches)) {
+	if (preg_match('/^(\*{0,3})(.*?)\[#([A-Za-z][\w-]+)\](.*?)$/m', $str, $matches)) {
 		$str = $matches[2] . $matches[4];
 		$id  = & $matches[3];
 	} else {
-		$str = preg_replace('/^\*{0,5}/', '', $str);
+		$str = preg_replace('/^\*{0,3}/', '', $str);
 	}
 
 	// Cut footnotes and tags
@@ -511,8 +652,11 @@ function pkwk_headers_sent()
 // Output common HTTP headers
 function pkwk_common_headers()
 {
+	global $http_response_custom_headers;
 	if (! PKWK_OPTIMISE) pkwk_headers_sent();
-
+	foreach ($http_response_custom_headers as $header) {
+		header($header);
+	}
 	if(defined('PKWK_ZLIB_LOADABLE_MODULE')) {
 		$matches = array();
 		if(ini_get('zlib.output_compression') &&
@@ -612,4 +756,11 @@ function pkwk_output_dtd($pkwk_dtd = PKWK_DTD_XHTML_1_1, $charset = CONTENT_CHAR
 	} else {
 		return '<meta http-equiv="content-type" content="text/html; charset=' . $charset . '" />' . "\n";
 	}
+}
+
+/**
+ * Get template of List (ul, ol, dl) attributes
+ */
+function pkwk_list_attrs_template() {
+	return ' class="list%d list-indent%d"';
 }

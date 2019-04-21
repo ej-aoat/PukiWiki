@@ -1,7 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone
-//
-// $Id: paint.inc.php,v 1.20 2011/01/25 15:01:01 henoheno Exp $
+// paint.inc.php
+// Copyright 2002-2017 PukiWiki Development Team
+// License: GPL v2 or (at your option) any later version
 //
 // Paint plugin
 
@@ -38,8 +39,9 @@ define('PAINT_FORMAT_NOMSG',"\x08NAME\x08 \x08NOW\x08");
 
 function plugin_paint_action()
 {
-	global $script, $vars, $pkwk_dtd, $_paint_messages;
+	global $vars, $_paint_messages;
 
+	$script = get_base_uri();
 	if (PKWK_READONLY) die_message('PKWK_READONLY prohibits editing');
 	
 	//戻り値を初期化
@@ -81,13 +83,13 @@ function plugin_paint_action()
 	else
 	{
 		$message = '';
-		$r_refer = $s_refer = '';
+		$page_uri = get_base_uri();
 		if (array_key_exists('refer',$vars))
 		{
-			$r_refer = pagename_urlencode($vars['refer']);
+			$page_uri = get_page_uri($vars['refer']);
 			$s_refer = htmlsc($vars['refer']);
 		}
-		$link = "<p><a href=\"$script?$r_refer\">$s_refer</a></p>";;
+		$link = "<p><a href=\"$page_uri\">$s_refer</a></p>";;
 
 		$w = PAINT_APPLET_WIDTH;
 		$h = PAINT_APPLET_HEIGHT;
@@ -139,23 +141,21 @@ function plugin_paint_action()
  <param name="param4" value="max_file_size=1000000" />
  <param name="param5" value="paint_no=$f_no" />
  <param name="enctype" value="multipart/form-data" />
- <param name="return.URL" value="$script?$r_refer" />
+ <param name="return.URL" value="$page_uri" />
  </applet>
  </div>
 EOD;
-		// XHTML 1.0 Transitional
-		if (! isset($pkwk_dtd) || $pkwk_dtd == PKWK_DTD_XHTML_1_1)
-			$pkwk_dtd = PKWK_DTD_XHTML_1_0_TRANSITIONAL;
 	}
 	return $retval;
 }
 
 function plugin_paint_convert()
 {
-	global $script,$vars,$digest;
+	global $vars,$digest;
 	global $_paint_messages;
 	static $numbers = array();
 
+	$script = get_base_uri();
 	if (PKWK_READONLY) return ''; // Show nothing
 
 	if (!array_key_exists($vars['page'],$numbers))
@@ -208,7 +208,7 @@ EOD;
 }
 function paint_insert_ref($filename)
 {
-	global $script,$vars,$now,$do_backup;
+	global $vars,$now,$do_backup;
 	global $_paint_messages,$_no_name;
 
 	$ret['msg'] = $_paint_messages['msg_title'];
@@ -266,4 +266,3 @@ function paint_insert_ref($filename)
 
 	return $ret;
 }
-

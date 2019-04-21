@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: default.ini.php,v 1.25 2005/12/20 14:04:40 henoheno Exp $
-// Copyright (C)
-//   2003-2005 PukiWiki Developers Team
+// default.ini.php
+// Copyright
+//   2003-2018 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -30,18 +30,20 @@ $search_word_color = 1;
 $list_index = 1;
 
 /////////////////////////////////////////////////
-// リスト構造の左マージン
-$_ul_left_margin = 0;   // リストと画面左端との間隔(px)
-$_ul_margin = 16;       // リストの階層間の間隔(px)
-$_ol_left_margin = 0;   // リストと画面左端との間隔(px)
-$_ol_margin = 16;       // リストの階層間の間隔(px)
-$_dl_left_margin = 0;   // リストと画面左端との間隔(px)
-$_dl_margin = 16;        // リストの階層間の間隔(px)
-$_list_pad_str = ' class="list%d" style="padding-left:%dpx;margin-left:%dpx"';
+// Obsolete: リスト構造の左マージン (Leaves for compatibility of plugins)
+// Use list-indent1 CSS class instead
+$_ul_left_margin = 0;   // Must be 0 (Plugin backward compatibility)
+$_ul_margin = 1;        // Must be 1 (Plugin backward compatibility)
+$_ol_left_margin = 0;   // Must be 0
+$_ol_margin = 1;        // Must be 1
+$_dl_left_margin = 0;   // Must be 0
+$_dl_margin = 1;        // Must be 1
+// Use pkwk_list_attrs_template() instead
+$_list_pad_str = ' class="list%d list-indent%d"';
 
 /////////////////////////////////////////////////
 // テキストエリアのカラム数
-$cols = 100;
+$cols = 80;
 
 /////////////////////////////////////////////////
 // テキストエリアの行数
@@ -73,7 +75,7 @@ $hr = '<hr class="full_hr" />';
 // 脚注機能関連
 
 // 脚注のアンカーに埋め込む本文の最大長
-define('PKWK_FOOTNOTE_TITLE_MAX', 16); // Characters
+define('PKWK_FOOTNOTE_TITLE_MAX', 100); // Characters
 
 // 脚注のアンカーを相対パスで表示する (0 = 絶対パス)
 //  * 相対パスの場合、以前のバージョンのOperaで問題になることがあります
@@ -178,5 +180,3 @@ $facemark_rules = array(
 	'&amp;(phoneto);'=>'[phoneto]',
 	'&amp;(faxto);'	=> '[faxto]',
 );
-
-?>

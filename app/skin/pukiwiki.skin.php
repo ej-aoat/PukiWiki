@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone.
 // pukiwiki.skin.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2017 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -44,12 +44,6 @@ $link  = & $_LINK;
 $image = & $_IMAGE['skin'];
 $rw    = ! PKWK_READONLY;
 
-// Decide charset for CSS
-$css_charset = 'iso-8859-1';
-switch(UI_LANG){
-	case 'ja': $css_charset = 'Shift_JIS'; break;
-}
-
 // MenuBar
 $menu = arg_check('read') && exist_plugin_convert('menu') ? do_plugin_convert('menu') : FALSE;
 
@@ -62,39 +56,42 @@ header('Cache-control: no-cache');
 header('Pragma: no-cache');
 header('Content-Type: text/html; charset=' . CONTENT_CHARSET);
 
-// HTML DTD, <html>, and receive content-type
-if (isset($pkwk_dtd)) {
-	$meta_content_type = pkwk_output_dtd($pkwk_dtd);
-} else {
-	$meta_content_type = pkwk_output_dtd();
-}
-
 ?>
+<!DOCTYPE html>
+<html lang="<?php echo LANG ?>">
 <head>
- <?php echo $meta_content_type ?>
- <meta http-equiv="content-style-type" content="text/css" />
+ <meta http-equiv="Content-Type" content="text/html; charset=<?php echo CONTENT_CHARSET ?>" />
 <?php if ($nofollow || ! $is_read)  { ?> <meta name="robots" content="NOINDEX,NOFOLLOW" /><?php } ?>
-<?php if (PKWK_ALLOW_JAVASCRIPT && isset($javascript)) { ?> <meta http-equiv="Content-Script-Type" content="text/javascript" /><?php } ?>
- <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+<?php if ($html_meta_referrer_policy) { ?> <meta name="referrer" content="<?php echo htmlsc(html_meta_referrer_policy) ?>" /><?php } ?>
 
  <title><?php echo $title ?> - <?php echo $page_title ?></title>
 
  <link rel="SHORTCUT ICON" href="<?php echo $image['favicon'] ?>" />
  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
- <link rel="stylesheet" type="text/css" media="screen" href="<?php echo SKIN_DIR ?>pukiwiki.css.php?charset=<?php echo $css_charset ?>" charset="<?php echo $css_charset ?>" />
- <link rel="stylesheet" type="text/css" media="print"  href="<?php echo SKIN_DIR ?>pukiwiki.css.php?charset=<?php echo $css_charset ?>&amp;media=print" charset="<?php echo $css_charset ?>" />
+ <link rel="stylesheet" type="text/css" href="<?php echo SKIN_DIR ?>pukiwiki.css" />
  <link rel="alternate" type="application/rss+xml" title="RSS" href="<?php echo $link['rss'] ?>" /><?php // RSS auto-discovery ?>
  <link rel="stylesheet" type="text/css" href="<?php echo SKIN_DIR ?>ajaxtree/ajaxtree.css" />
+ <script type="text/javascript" src="skin/main.js" defer></script>
+ <script type="text/javascript" src="skin/search2.js" defer></script>
 
 <?php echo $head_tag ?>
 </head>
+<body>
+<nav id="header" class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
+	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+		<span class="navbar-toggler-icon"></span>
+	</button>
+<?php if(PKWK_SKIN_SHOW_NAVBAR) { ?>
+	<div class="collapse navbar-collapse" id="navbarSupportedContent">
+		<a class="navbar-brand" href="<?php echo $link['top'] ?>">
+			<img id="logo" src="<?php echo IMAGE_DIR . $image['logo'] ?>" width="40" height="40" alt="[PukiWiki]" title="[PukiWiki]" />
+		</a>
 <?php
 function _navigator($key, $value = '', $javascript = '', $class = 'dropdown-item'){
 	$lang = & $GLOBALS['_LANG']['skin'];
 	$link = & $GLOBALS['_LINK'];
 	if (! isset($lang[$key])) { echo 'LANG NOT FOUND'; return FALSE; }
 	if (! isset($link[$key])) { echo 'LINK NOT FOUND'; return FALSE; }
-	if (! PKWK_ALLOW_JAVASCRIPT) $javascript = '';
 
 	echo '<a class="' . $class . '" href="' . $link[$key] . '" ' . $javascript . '>' .
 		(($value === '') ? $lang[$key] : $value) .
@@ -103,17 +100,7 @@ function _navigator($key, $value = '', $javascript = '', $class = 'dropdown-item
 	return TRUE;
 }
 ?>
-<body>
-
-<nav id="header" class="navbar sticky-top navbar-expand-lg navbar-dark bg-dark">
-	<button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-		<span class="navbar-toggler-icon"></span>
-	</button>
-	<?php if(PKWK_SKIN_SHOW_NAVBAR) { ?>
-	<div class="collapse navbar-collapse" id="navbarSupportedContent">
-		<a class="navbar-brand" href="<?php echo $link['top'] ?>">
-			<img id="logo" src="<?php echo IMAGE_DIR . $image['logo'] ?>" width="40" height="40" alt="[PukiWiki]" title="[PukiWiki]" />
-		</a>
+<!-- [ <?php _navigator('top') ?> ] &nbsp; -->
 <?php
 // ページ名が階層化ページ名の場合に、
 // 階層化文字列部分を除去したタイトルを表示する。
@@ -327,11 +314,12 @@ function _toolbar($key, $x = 20, $y = 20){
 <?php } ?>
 
 <div id="footer">
- Site admin: <a href="<?php echo $modifierlink ?>"><?php echo $modifier ?></a><p />
+ Site admin: <a href="<?php echo $modifierlink ?>"><?php echo $modifier ?></a>
+ <p>
  <?php echo S_COPYRIGHT ?>.
  Powered by PHP <?php echo PHP_VERSION ?>. HTML convert time: <?php echo elapsedtime() ?> sec.
+ </p>
 </div>
-
 <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.6/umd/popper.min.js" integrity="sha384-wHAiFfRlMFy6i5SRaxvfOCifBUQy1xHdJ/yoi7FRNXMRBu5WHdZYu1hA6ZOblgut" crossorigin="anonymous"></script>
 <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/js/bootstrap.min.js" integrity="sha384-B0UglyR+jN6CkvvICOB2joaf5I4l3gm9GU6Hc1og6Ls7i6U/mkkaduKaBhlAXv9k" crossorigin="anonymous"></script>

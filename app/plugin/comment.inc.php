@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone
 // comment.inc.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2017 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -20,7 +20,7 @@ define('PLUGIN_COMMENT_FORMAT_STRING', "\x08MSG\x08 -- \x08NAME\x08 \x08NOW\x08"
 
 function plugin_comment_action()
 {
-	global $script, $vars, $now, $_title_updated, $_no_name;
+	global $vars, $now, $_title_updated, $_no_name;
 	global $_msg_comment_collided, $_title_comment_collided;
 	global $_comment_plugin_fail_msg;
 
@@ -96,8 +96,9 @@ function plugin_comment_convert()
 
 	if (PKWK_READONLY) return ''; // Show nothing
 
-	if (! isset($numbers[$vars['page']])) $numbers[$vars['page']] = 0;
-	$comment_no = $numbers[$vars['page']]++;
+	$page = $vars['page'];
+	if (! isset($numbers[$page])) $numbers[$page] = 0;
+	$comment_no = $numbers[$page]++;
 
 	$options = func_num_args() ? func_get_args() : array();
 	if (in_array('noname', $options)) {
@@ -114,8 +115,8 @@ function plugin_comment_convert()
 	$above  = in_array('above',  $options) ? '1' :
 		(in_array('below', $options) ? '0' : PLUGIN_COMMENT_DIRECTION_DEFAULT);
 
-	$script = get_script_uri();
-	$s_page = htmlsc($vars['page']);
+	$script = get_page_uri($page);
+	$s_page = htmlsc($page);
 	$string = <<<EOD
 <br />
 <form action="$script" method="post">

@@ -2,7 +2,7 @@
 // PukiWiki - Yet another WikiWikiWeb clone.
 // ja.lng.php
 // Copyright
-//   2002-2016 PukiWiki Development Team
+//   2002-2018 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -46,15 +46,23 @@ $_msg_notfound       = '指定されたページは見つかりませんでし�
 $_msg_addline        = '追加された行は<span class="diff_added">この色</span>です。';
 $_msg_delline        = '削除された行は<span class="diff_removed">この色</span>です。';
 $_msg_goto           = '$1 へ行く。';
-$_msg_andresult      = '$1 のすべてを含むページは <strong>$3</strong> ページ中、 <strong>$2</strong> ページ見つかりました。';
-$_msg_orresult       = '$1 のいずれかを含むページは <strong>$3</strong> ページ中、 <strong>$2</strong> ページ見つかりました。';
-$_msg_notfoundresult = '$1 を含むページは見つかりませんでした。';
+$_msg_andresult      = '$1 を含むページは <strong>$3</strong> ページ中、<strong>$2</strong> ページ見つかりました。';
+$_msg_orresult       = '$1 のいずれかを含むページは <strong>$3</strong> ページ中、<strong>$2</strong> ページ見つかりました。';
+$_msg_notfoundresult = '<strong>$3</strong> ページ中、$1 を含むページは見つかりませんでした。';
+$_msg_prev_results   = '&lt;&lt; 前の $1 ページ';
+$_msg_more_results   = '次の $1 ページ &gt;&gt;';
 $_msg_symbol         = '記号';
 $_msg_other          = '日本語';
 $_msg_help           = 'テキスト整形のルールを表示する';
 $_msg_week           = array('日','月','火','水','木','金','土');
 $_msg_content_back_to_top = '<div class="jumpmenu"><a href="#navigator">&uarr;</a></div>';
 $_msg_word           = 'これらのキーワードがハイライトされています：';
+$_msg_unsupported_webbrowser = 'この機能はお使いのWebブラウザには対応していません。';
+$_msg_use_alternative_link = 'リンク先の機能をご利用ください: $1';
+$_msg_general_error  = '処理中にエラーが発生しました。';
+
+$_msg_edit_cancel_confirm = '編集中のテキストは破棄されます。よろしいですか ?';
+$_msg_edit_unloadbefore_message = '入力したデータは保存されません。';
 
 ///////////////////////////////////////
 // Symbols
@@ -73,7 +81,6 @@ $_btn_template  = '雛形とするページ';
 $_btn_load      = '読込';
 $_btn_edit      = '編集';
 $_btn_delete    = '削除';
-$_label_template_pages	= 'テンプレートページ';
 
 ///////////////////////////////////////
 // Authentication
@@ -114,7 +121,7 @@ $_LANG['skin']['rename']    = '名前変更';	// Rename a page (and related)
 $_LANG['skin']['rss']       = '最終更新のRSS';	// RSS of RecentChanges
 $_LANG['skin']['rss10']     = & $_LANG['skin']['rss'];
 $_LANG['skin']['rss20']     = & $_LANG['skin']['rss'];
-$_LANG['skin']['search']    = '単語検索';
+$_LANG['skin']['search']    = '検索';
 $_LANG['skin']['top']       = 'トップ';	// Top page
 $_LANG['skin']['unfreeze']  = '凍結解除';
 $_LANG['skin']['upload']    = '添付';	// Attach a file
@@ -361,7 +368,7 @@ $_rename_messages  = array(
 
 ///////////////////////////////////////
 // search.inc.php
-$_title_search  = '単語検索';
+$_title_search  = '検索';
 $_title_result  = '$1 の検索結果';
 $_msg_searching = '全てのページから単語を検索します。大文字小文字の区別はありません。';
 $_btn_search    = '検索';
@@ -369,6 +376,9 @@ $_btn_and       = 'AND検索';
 $_btn_or        = 'OR検索';
 $_search_pages  = '$1 から始まるページを検索';
 $_search_all    = '全てのページを検索';
+$_search_searching = '検索中...';
+$_search_showing_result = '検索結果表示';
+$_search_detail = '詳細表示';
 
 ///////////////////////////////////////
 // source.inc.php
@@ -436,4 +446,12 @@ $_loginform_messages = array(
 	'password' => 'パスワード:',
 	'login' => 'ログイン',
 	'invalid_username_or_password' => 'ユーザー名またはパスワードが違います'
+);
+
+///////////////////////////////////////
+// external_link.inc.php
+$_external_link_messages = array(
+	'page_title' => '外部リンク: %s',
+	'desc' => '選択されたURLは本サイトのコンテンツではありません。',
+	'wait_n_seconds' => '%s 秒後に自動的に移動します。',
 );

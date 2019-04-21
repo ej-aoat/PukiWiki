@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
 // file.php
-// Copyright (C)
-//   2002-2016 PukiWiki Development Team
+// Copyright
+//   2002-2017 PukiWiki Development Team
 //   2001-2002 Originally written by yu-ji
 // License: GPL v2 or (at your option) any later version
 //
@@ -15,9 +15,16 @@ define('PKWK_MAXSHOW_CACHE', 'recent.dat');
 // AutoLink
 define('PKWK_AUTOLINK_REGEX_CACHE', 'autolink.dat');
 
-// Get source(wiki text) data of the page
-// Returns FALSE if error occurerd
-function get_source($page = NULL, $lock = TRUE, $join = FALSE)
+/**
+ * Get source(wiki text) data of the page
+ *
+ * @param $page page name
+ * @param $lock lock
+ * @param $join true: return string, false: return array of string
+ * @param $raw true: return file content as-is
+ * @return FALSE if error occurerd
+ */
+function get_source($page = NULL, $lock = TRUE, $join = FALSE, $raw = FALSE)
 {
 	//$result = NULL;	// File is not found
 	$result = $join ? '' : array();
@@ -44,7 +51,10 @@ function get_source($page = NULL, $lock = TRUE, $join = FALSE)
 			} else {
 				$result = fread($fp, $size);
 				if ($result !== FALSE) {
-					// Removing line-feeds
+					if ($raw) {
+						return $result;
+					}
+					// Removing Carriage-Return
 					$result = str_replace("\r", '', $result);
 				}
 			}
@@ -52,7 +62,7 @@ function get_source($page = NULL, $lock = TRUE, $join = FALSE)
 			// Returns an array
 			$result = file($path);
 			if ($result !== FALSE) {
-				// Removing line-feeds
+				// Removing Carriage-Return
 				$result = str_replace("\r", '', $result);
 			}
 		}
@@ -72,6 +82,19 @@ function get_filetime($page)
 	return is_page($page) ? filemtime(get_filename($page)) - LOCALZONE : 0;
 }
 
+/**
+ * Get last-modified filemtime (plain value) of the page.
+ *
+ * @param $page
+ */
+function get_page_date_atom($page)
+{
+	if (is_page($page)) {
+		return get_date_atom(filemtime(get_filename($page)));
+	}
+	return null;
+}
+
 // Get physical file name of the page
 function get_filename($page)
 {
@@ -84,14 +107,18 @@ function page_write($page, $postdata, $notimestamp = FALSE)
 	if (PKWK_READONLY) return; // Do nothing
 
 	$postdata = make_str_rules($postdata);
+	$timestamp_to_keep = null;
+	if ($notimestamp) {
+		$timestamp_to_keep = get_filetime($page);
+	}
 	$text_without_author = remove_author_info($postdata);
-	$postdata = add_author_info($text_without_author);
+	$postdata = add_author_info($text_without_author, $timestamp_to_keep);
 	$is_delete = empty($text_without_author);
 
 	// Do nothing when it has no changes
 	$oldpostdata = is_page($page) ? join('', get_source($page)) : '';
 	$oldtext_without_author = remove_author_info($oldpostdata);
-	if ($text_without_author === $oldtext_without_author) {
+	if (!$is_delete && $text_without_author === $oldtext_without_author) {
 		// Do nothing on updating with unchanged content
 		return;
 	}
@@ -167,7 +194,13 @@ function make_str_rules($source)
 	return implode("\n", $lines);
 }
 
-function add_author_info($wikitext)
+/**
+ * Add author plugin text for wiki text body
+ *
+ * @param string $wikitext
+ * @param integer $timestamp_to_keep Set null when not to keep timestamp
+ */
+function add_author_info($wikitext, $timestamp_to_keep)
 {
 	global $auth_user, $auth_user_fullname;
 	$author = preg_replace('/"/', '', $auth_user);
@@ -176,10 +209,14 @@ function add_author_info($wikitext)
 		// Fullname is empty, use $author as its fullname
 		$fullname = preg_replace('/^[^:]*:/', '', $author);
 	}
+	$datetime_to_keep = '';
+	if (!is_null($timestamp_to_keep)) {
+		$datetime_to_keep .= ';' . get_date_atom($timestamp_to_keep + LOCALZONE);
+	}
 	$displayname = preg_replace('/"/', '', $fullname);
 	$user_prefix = get_auth_user_prefix();
 	$author_text = sprintf('#author("%s","%s","%s")',
-		get_date_atom(UTIME + LOCALZONE),
+		get_date_atom(UTIME + LOCALZONE) . $datetime_to_keep,
 		($author ? $user_prefix . $author : ''),
 		$displayname) . "\n";
 	return $author_text . $wikitext;
@@ -190,19 +227,75 @@ function remove_author_info($wikitext)
 	return preg_replace('/^\s*#author\([^\n]*(\n|$)/m', '', $wikitext);
 }
 
-function get_date_atom($timestamp)
+/**
+ * Remove author line from wikitext
+ */
+function remove_author_header($wikitext)
 {
-	// Compatible with DATE_ATOM format
-	// return date(DATE_ATOM, $timestamp);
-	$zmin = abs(LOCALZONE / 60);
-	return date('Y-m-d\TH:i:s', $timestamp) . sprintf('%s%02d:%02d',
-		(LOCALZONE < 0 ? '-' : '+') , $zmin / 60, $zmin % 60);
+	$start = 0;
+	while (($pos = strpos($wikitext, "\n", $start)) != false) {
+		$line = substr($wikitext, $start, $pos);
+		$m = null;
+		if (preg_match('/^#author\(/', $line, $m)) {
+			// fond #author line, Remove this line only
+			if ($start === 0) {
+				return substr($wikitext, $pos + 1);
+			} else {
+				return substr($wikitext, 0, $start - 1) .
+					substr($wikitext, $pos + 1);
+			}
+		} else if (preg_match('/^#freeze(\W|$)/', $line, $m)) {
+			// Found #freeze still in header
+		} else {
+			// other line, #author not found
+			return $wikitext;
+		}
+		$start = $pos + 1;
+	}
+	return $wikitext;
+}
+
+/**
+ * Get author info from wikitext
+ */
+function get_author_info($wikitext)
+{
+	$start = 0;
+	while (($pos = strpos($wikitext, "\n", $start)) != false) {
+		$line = substr($wikitext, $start, $pos);
+		$m = null;
+		if (preg_match('/^#author\(/', $line, $m)) {
+			return $line;
+		} else if (preg_match('/^#freeze(\W|$)/', $line, $m)) {
+			// Found #freeze still in header
+		} else {
+			// other line, #author not found
+			return null;
+		}
+		$start = $pos + 1;
+	}
+	return null;
+}
+
+/**
+ * Get updated datetime from author
+ */
+function get_update_datetime_from_author($author_line) {
+	$m = null;
+	if (preg_match('/^#author\(\"([^\";]+)(?:;([^\";]+))?/', $author_line, $m)) {
+		if ($m[2]) {
+			return $m[2];
+		} else if ($m[1]) {
+			return $m[1];
+		}
+	}
+	return null;
 }
 
 // Generate ID
 function generate_fixed_heading_anchor_id($seed)
 {
-	// A random alphabetic letter + 7 letters of random strings from md()
+	// A random alphabetic letter + 7 letters of random strings from md5()
 	return chr(mt_rand(ord('a'), ord('z'))) .
 		substr(md5(uniqid(substr($seed, 0, 100), TRUE)),
 		mt_rand(0, 24), 7);
@@ -305,14 +398,16 @@ function file_write($dir, $page, $str, $notimestamp = FALSE, $is_delete = FALSE)
 	} else if ($dir == DIFF_DIR && $notify) {
 		if ($notify_diff_only) $str = preg_replace('/^[^-+].*\n/m', '', $str);
 		$footer['ACTION'] = 'Page update';
-		$footer['PAGE']   = & $page;
-		$footer['URI']    = get_script_uri() . '?' . pagename_urlencode($page);
+		$footer['PAGE']   = $page;
+		$footer['URI']    = get_page_uri($page, PKWK_URI_ABSOLUTE);
 		$footer['USER_AGENT']  = TRUE;
 		$footer['REMOTE_ADDR'] = TRUE;
 		pkwk_mail_notify($notify_subject, $str, $footer) or
 			die('pkwk_mail_notify(): Failed');
 	}
-
+	if ($dir === DIFF_DIR) {
+		pkwk_log_updates($page, $str);
+	}
 	is_page($page, TRUE); // Clear is_page() cache
 }
 
@@ -527,6 +622,32 @@ function put_lastmodified()
 	}
 }
 
+/**
+ * Get recent files
+ *
+ * @return Array of (file => time)
+ */
+function get_recent_files()
+{
+	$recentfile = CACHE_DIR . PKWK_MAXSHOW_CACHE;
+	$lines = file($recentfile);
+	if (!$lines) return array();
+	$files = array();
+	foreach ($lines as $line) {
+		list ($time, $file) = explode("\t", rtrim($line));
+		$files[$file] = $time;
+	}
+	return $files;
+}
+
+/**
+ * Update RecentChanges page / Invalidate recent.dat
+ */
+function delete_recent_changes_cache() {
+	$file = CACHE_DIR . PKWK_MAXSHOW_CACHE;
+	unlink($file);
+}
+
 // Get elapsed date of the page
 function get_pg_passage($page, $sw = TRUE)
 {
@@ -568,12 +689,41 @@ function get_existfiles($dir = DATA_DIR, $ext = '.txt')
 	return $aryret;
 }
 
+/**
+ * Get/Set pagelist cache enabled for get_existpages()
+ *
+ * @param $newvalue Set true when the system can cache the page list
+ * @return true if can use page list cache
+ */
+function is_pagelist_cache_enabled($newvalue = null)
+{
+	static $cache_enabled = null;
+
+	if (!is_null($newvalue)) {
+		$cache_enabled = $newvalue;
+		return; // Return nothing on setting newvalue call
+	}
+	if (is_null($cache_enabled)) {
+		return false;
+	}
+	return $cache_enabled;
+}
+
 // Get a page list of this wiki
 function get_existpages($dir = DATA_DIR, $ext = '.txt')
 {
+	static $cached_list = null; // Cached wikitext page list
+	$use_cache = false;
+
+	if ($dir === DATA_DIR && $ext === '.txt' && is_pagelist_cache_enabled()) {
+		// Use pagelist cache for "wiki/*.txt" files
+		if (!is_null($cached_list)) {
+			return $cached_list;
+		}
+		$use_cache = true;
+	}
 	$aryret = array();
 	$pattern = '/^((?:[0-9A-F]{2})+)' . preg_quote($ext, '/') . '$/';
-
 	$dp = @opendir($dir) or die_message($dir . ' is not found or not readable.');
 	$matches = array();
 	while (($file = readdir($dp)) !== FALSE) {
@@ -582,7 +732,9 @@ function get_existpages($dir = DATA_DIR, $ext = '.txt')
 		}
 	}
 	closedir($dp);
-
+	if ($use_cache) {
+		$cached_list = $aryret;
+	}
 	return $aryret;
 }
 
@@ -839,5 +991,74 @@ function pkwk_touch_file($filename, $time = FALSE, $atime = FALSE)
 	} else {
 		die('pkwk_touch_file(): Invalid UID and (not writable for the directory or not a flie): ' .
 			htmlsc(basename($filename)));
+	}
+}
+
+/**
+ * Lock-enabled file_get_contents
+ *
+ * Require: PHP5+
+ */
+function pkwk_file_get_contents($filename) {
+	if (! file_exists($filename)) {
+		return false;
+	}
+	$fp   = fopen($filename, 'rb');
+	flock($fp, LOCK_SH);
+	$file = file_get_contents($filename);
+	flock($fp, LOCK_UN);
+	return $file;
+}
+
+/**
+ * Prepare some cache files for convert_html()
+ *
+ * * Make cache/autolink.dat if needed
+ */
+function prepare_display_materials() {
+	global $autolink;
+	if ($autolink) {
+		// Make sure 'cache/autolink.dat'
+		$file = CACHE_DIR . PKWK_AUTOLINK_REGEX_CACHE;
+		if (!file_exists($file)) {
+			// Re-create autolink.dat
+			put_lastmodified();
+		}
+	}
+}
+
+/**
+ * Prepare page related links and references for links_get_related()
+ */
+function prepare_links_related($page) {
+	global $defaultpage;
+
+	$enc_defaultpage = encode($defaultpage);
+	if (file_exists(CACHE_DIR . $enc_defaultpage . '.rel')) return;
+	if (file_exists(CACHE_DIR . $enc_defaultpage . '.ref')) return;
+	$enc_name = encode($page);
+	if (file_exists(CACHE_DIR . $enc_name . '.rel')) return;
+	if (file_exists(CACHE_DIR . $enc_name . '.ref')) return;
+
+	$pattern = '/^((?:[0-9A-F]{2})+)' . '(\.ref|\.rel)' . '$/';
+	$dir = CACHE_DIR;
+	$dp = @opendir($dir) or die_message('CACHE_DIR/'. ' is not found or not readable.');
+	$rel_ref_ready = false;
+	$count = 0;
+	while (($file = readdir($dp)) !== FALSE) {
+		if (preg_match($pattern, $file, $matches)) {
+			if ($count++ > 5) {
+				$rel_ref_ready = true;
+				break;
+			}
+		}
+	}
+	closedir($dp);
+	if (!$rel_ref_ready) {
+		if (count(get_existpages()) < 50) {
+			// Make link files automatically only if page count < 50.
+			// Because large number of update links will cause PHP timeout.
+			links_init();
+		}
 	}
 }

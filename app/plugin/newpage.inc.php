@@ -1,13 +1,17 @@
 <?php
-// $Id: newpage.inc.php,v 1.16 2011/01/25 15:01:01 henoheno Exp $
+// PukiWiki - Yet another WikiWikiWeb clone.
+// newpage.inc.php
+// Copyright 2002-2017 PukiWiki Development Team
+// License: GPL v2 or (at your option) any later version
 //
 // Newpage plugin
 
 function plugin_newpage_convert()
 {
-	global $script, $vars, $_btn_edit, $_msg_newpage, $BracketName;
+	global $vars, $_btn_edit, $_msg_newpage, $BracketName;
 	static $id = 0;
 
+	$script = get_base_uri();
 	if (PKWK_READONLY) return ''; // Show nothing
 
 	$newpage = '';
@@ -50,9 +54,8 @@ function plugin_newpage_action()
 		$r_refer = rawurlencode($vars['refer']);
 
 		pkwk_headers_sent();
-		header('Location: ' . get_script_uri() .
+		header('Location: ' . get_base_uri(PKWK_URI_ROOT) .
 			'?cmd=read&page=' . $r_page . '&refer=' . $r_refer);
 		exit;
 	}
 }
-?>

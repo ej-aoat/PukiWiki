@@ -1,8 +1,8 @@
 <?php
 // PukiWiki - Yet another WikiWikiWeb clone.
-// $Id: bugtrack.inc.php,v 1.27 2011/01/25 15:01:01 henoheno Exp $
-// Copyright (C)
-//   2002-2005, 2007 PukiWiki Developers Team
+// bugtrack.inc.php
+// Copyright
+//   2002-2017 PukiWiki Development Team
 //   2002 Y.MASUI GPL2  http://masui.net/pukiwiki/ masui@masui.net
 //
 // BugTrack plugin
@@ -22,10 +22,11 @@ function plugin_bugtrack_init()
 
 	$_plugin_bugtrack = array(
 		'priority_list'  => array('緊急', '重要', '普通', '低'),
-		'state_list'     => array('提案', '着手', 'CVS待ち', '完了', '保留', '却下'),
-		'state_sort'     => array('着手', 'CVS待ち', '保留', '完了', '提案', '却下'),
-		'state_bgcolor'  => array('#ccccff', '#ffcc99', '#ccddcc', '#ccffcc', '#ffccff', '#cccccc', '#ff3333'),
-		'header_bgcolor' => '#ffffcc',
+		'state_list'     => array('提案', '着手', '完了', '保留', '却下'),
+		'state_sort'     => array('着手', '保留', '完了', '提案', '却下'),
+		'state_class'  => array('bugtrack_state_proposal', 'bugtrack_state_accept',
+			'bugrack_state_resolved', 'bugtrack_state_pending',
+			'bugtrack_state_cancel', 'bugtrack_state_undef'),
 		'base'     => 'ページ',
 		'summary'  => 'サマリ',
 		'nosummary'=> 'ここにサマリを記入して下さい',
@@ -99,7 +100,7 @@ function plugin_bugtrack_print_form($base, $category)
 		$encoded_category .= '</select>';
 	}
 
-	$script     = get_script_uri();
+	$script     = get_base_uri();
 	$s_base     = htmlsc($base);
 	$s_name     = htmlsc($_plugin_bugtrack['name']);
 	$s_category = htmlsc($_plugin_bugtrack['category']);
@@ -177,7 +178,7 @@ function plugin_bugtrack_action()
 		$post['version'], $post['body']);
 
 	pkwk_headers_sent();
-	header('Location: ' . get_script_uri() . '?' . pagename_urlencode($page));
+	header('Location: ' . get_page_uri($page, PKWK_URI_ROOT));
 	exit;
 }
 
@@ -191,17 +192,17 @@ function plugin_bugtrack_write($base, $pagename, $summary, $name, $priority, $st
 	$postdata = plugin_bugtrack_template($base, $summary, $name, $priority,
 		$state, $category, $version, $body);
 
-	$id = $jump = 1;
-	$page = $base . '/' . sprintf(PLUGIN_BUGTRACK_NUMBER_FORMAT, $id);
-	while (is_page($page)) {
-		$id   = $jump;
-		$jump += 50;
-		$page = $base . '/' . sprintf(PLUGIN_BUGTRACK_NUMBER_FORMAT, $jump);
+	$page_list = plugin_bugtrack_get_page_list($base, false);
+	usort($page_list, '_plugin_bugtrack_list_paganame_compare');
+	if (count($page_list) == 0) {
+		$id = 1;
+	} else {
+		$latest_page = $page_list[count($page_list) - 1]['name'];
+		$id = intval(substr($latest_page, strlen($base) + 1)) + 1;
 	}
 	$page = $base . '/' . sprintf(PLUGIN_BUGTRACK_NUMBER_FORMAT, $id);
-	while (is_page($page))
-		$page = $base . '/' . sprintf(PLUGIN_BUGTRACK_NUMBER_FORMAT, ++$id);
 
+	check_editable($page, true, true);
 	if ($pagename == '') {
 		page_write($page, $postdata);
 	} else {
@@ -209,6 +210,7 @@ function plugin_bugtrack_write($base, $pagename, $summary, $name, $priority, $st
 		if (is_page($pagename) || ! is_pagename($pagename)) {
 			$pagename = $page; // Set default
 		} else {
+			check_editable($pagename, true, true);
 			page_write($page, 'move to [[' . $pagename . ']]');
 		}
 		page_write($pagename, $postdata);
@@ -220,10 +222,10 @@ function plugin_bugtrack_write($base, $pagename, $summary, $name, $priority, $st
 // Generate new page contents
 function plugin_bugtrack_template($base, $summary, $name, $priority, $state, $category, $version, $body)
 {
-	global $_plugin_bugtrack, $WikiName;
+	global $_plugin_bugtrack;
 
-	if (! preg_match("/^$WikiName$$/",$base)) $base = '[[' . $base . ']]';
-	if ($name != '' && ! preg_match("/^$WikiName$$/",$name)) $name = '[[' . $name . ']]';
+	$base = '[[' . $base . ']]';
+	if ($name != '') $name = '[[' . $name . ']]';
 
 	if ($name    == '') $name    = $_plugin_bugtrack['noname'];
 	if ($summary == '') $summary = $_plugin_bugtrack['nosummary'];
@@ -250,72 +252,203 @@ EOD;
 // ----------------------------------------
 // BugTrack-List plugin
 
-// #bugtrack_list plugin itself
+function _plugin_bugtrack_list_paganame_compare($a, $b)
+{
+	return strnatcmp($a['name'], $b['name']);
+}
+
+
+/**
+ * Get page list for "$page/"
+ */
+function plugin_bugtrack_get_page_list($page, $needs_filetime) {
+	$page_list = array();
+	$pattern = $page . '/';
+	$pattern_len = strlen($pattern);
+	foreach (get_existpages() as $p) {
+		if (strncmp($p, $pattern, $pattern_len) === 0 && pkwk_ctype_digit(substr($p, $pattern_len))) {
+			if ($needs_filetime) {
+				$page_list[] = array('name'=>$p,'filetime'=>get_filetime($p));
+			} else {
+				$page_list[] = array('name'=>$p);
+			}
+		}
+	}
+	return $page_list;
+}
+
+/**
+ * #bugtrack_list plugin itself
+ *
+ * Cache specification
+ * * Enable only for PHP5.4+ (Because of JSON_UNESCAPE_UNICODE)
+ * * Use cached values for articles that have the unchaged filemtime
+ * * Invalidate all cache data everyday
+ */
 function plugin_bugtrack_list_convert()
 {
-	global $script, $vars, $_plugin_bugtrack;
-
+	global $vars, $_plugin_bugtrack, $_title_cannotread;
+	global $whatsdeleted;
+	$cache_format_version = 1;
+	$cache_expire_time = 60 * 60 * 24;
+	$cache_refresh_time_prev;
+	static $cache_enabled;
+	if (!isset($cache_enabled)) {
+		$cache_enabled = defined('JSON_UNESCAPED_UNICODE'); // PHP 5.4+
+	}
 	$page = $vars['page'];
 	if (func_num_args()) {
 		list($_page) = func_get_args();
 		$_page = get_fullname(strip_bracket($_page), $page);
 		if (is_pagename($_page)) $page = $_page;
 	}
-
+	if (!is_page_readable($page)) {
+		$body = str_replace('$1', htmlsc($page), $_title_cannotread);
+		return $body;
+	}
+	if ($cache_enabled) {
+		$cache_filepath = CACHE_DIR . encode($page) . '.bugtrack';
+		$json_cached = pkwk_file_get_contents($cache_filepath);
+		$wrapdata = json_decode($json_cached);
+		if (is_object($wrapdata) && $wrapdata) {
+			$recent_deleted_filetime = get_filetime($whatsdeleted);
+			$recent_dat_filemtime = filemtime(CACHE_DIR . PKWK_MAXSHOW_CACHE);
+			if ($recent_deleted_filetime === $wrapdata->recent_deleted_filetime &&
+				$recent_dat_filemtime === $wrapdata->recent_dat_filemtime &&
+				$recent_dat_filemtime !== false &&
+				$recent_deleted_filetime !== 0) {
+				return $wrapdata->html;
+			}
+		}
+	}
+	$cache_data = null;
 	$data = array();
-	$pattern = $page . '/';
-	$pattern_len = strlen($pattern);
-	foreach (get_existpages() as $page)
-		if (strpos($page, $pattern) === 0 && is_numeric(substr($page, $pattern_len)))
-			array_push($data, plugin_bugtrack_list_pageinfo($page));
-
+	$page_list = plugin_bugtrack_get_page_list($page, true);
+	usort($page_list, '_plugin_bugtrack_list_paganame_compare');
 	$count_list = count($_plugin_bugtrack['state_list']);
+	$data_map = array();
+	if ($cache_enabled) {
+		// Cache management
+		$data_updated = true;
+		$cache_filepath = CACHE_DIR . encode($page) . '.bugtrack';
+		$json_cached = pkwk_file_get_contents($cache_filepath);
+		if ($json_cached) {
+			$wrapdata = json_decode($json_cached);
+			if (is_object($wrapdata)) {
+				if (isset($wrapdata->version, $wrapdata->pages, $wrapdata->refreshed_at)) {
+					$cache_time_prev = $wrapdata->refreshed_at;
+				  if ($cache_format_version == $wrapdata->version
+						&& time() < $cache_time_prev + $cache_expire_time) {
+						$data = $wrapdata->pages;
+						$cache_refresh_time_prev = $cache_time_prev;
+					}
+				}
+			}
+			if (is_array($data) && !empty($data)) {
+				$all_ok = true;
+				foreach ($page_list as $i=>$page_info) {
+					list($page_name, $no, $summary, $name, $priority, $state, $category, $filetime) = $data[$i];
+					if ($filetime !== $page_info['filetime'] || $page_name !== $page_info['name']) {
+						$all_ok = false;
+						break;
+					}
+				}
+				if (!$all_ok) {
+					// Clear cache
+					foreach ($data as $d) {
+						$page_name = $d[0];
+						$data_map[$page_name] = $d;
+					}
+					$data = array();
+				}
+			}
+		}
+	}
 
-	$table = array();
-	for ($i = 0; $i <= $count_list + 1; ++$i) $table[$i] = array();
+	if (empty($data) || !empty($data_map)) {
+		// No cache
+		foreach ($page_list as $page_info) {
+			$page_name = $page_info['name'];
+			$filled = false;
+			if (isset($data_map[$page_name])) {
+				$d = $data_map[$page_name];
+				list($page_name, $no, $summary, $name, $priority, $state, $category, $filetime) = $d;
+				if ($filetime == $page_info['filetime']) {
+					$data[] = $d;
+					$filled = true;
+				}
+			}
+			if (!$filled) {
+				$data[] = plugin_bugtrack_list_pageinfo($page_info['name'], null, true, $page_info['filetime']);
+			}
+		}
+		foreach ($data as $i=>$line) {
+			list($page_name, $no, $summary, $name, $priority, $state, $category, $filetime, $state_no_cached, $html_cached) = $line;
+			if (isset($state_no_cached) && isset($html_cached)) {
+				continue;
+			}
+			foreach (array('name', 'priority', 'state', 'category') as $item)
+				$$item = htmlsc($$item);
+			$page_link = make_pagelink($page_name);
 
-	foreach ($data as $line) {
-		list($page, $no, $summary, $name, $priority, $state, $category) = $line;
-		foreach (array('summary', 'name', 'priority', 'state', 'category') as $item)
-			$$item = htmlsc($$item);
-		$page_link = make_pagelink($page);
+			$state_no = array_search($state, $_plugin_bugtrack['state_sort']);
+			if ($state_no === NULL || $state_no === FALSE) $state_no = $count_list;
+			$cssclass = htmlsc($_plugin_bugtrack['state_class'][$state_no]);
 
-		$state_no = array_search($state, $_plugin_bugtrack['state_sort']);
-		if ($state_no === NULL || $state_no === FALSE) $state_no = $count_list;
-		$bgcolor = htmlsc($_plugin_bugtrack['state_bgcolor'][$state_no]);
-
-		$row = <<<EOD
- <tr>
-  <td style="background-color:$bgcolor">$page_link</td>
-  <td style="background-color:$bgcolor">$state</td>
-  <td style="background-color:$bgcolor">$priority</td>
-  <td style="background-color:$bgcolor">$category</td>
-  <td style="background-color:$bgcolor">$name</td>
-  <td style="background-color:$bgcolor">$summary</td>
+			$row = <<<EOD
+ <tr class="$cssclass">
+  <td>$page_link</td>
+  <td>$state</td>
+  <td>$priority</td>
+  <td>$category</td>
+  <td>$name</td>
+  <td>$summary</td>
  </tr>
 EOD;
-		$table[$state_no][$no] = $row;
+			$row = preg_replace('#(?<=>)\n\s+#', '', $row) . "\n"; // Reduce space size
+			$rec = &$data[$i];
+			$rec[] = $state_no; // color number
+			$rec[] = $row; // HTML content
+		}
+		if ($cache_enabled) {
+			// Save cache
+			if (isset($cache_refresh_time_prev)) {
+				$refreshed_at = $cache_refresh_time_prev;
+			} else {
+				$refreshed_at = time();
+			}
+			$cache_data = array('refreshed_at'=>$refreshed_at, 'pages'=>$data, 'version'=>$cache_format_version);
+		}
 	}
-
-	$table_html = ' <tr>' . "\n";
-	$bgcolor = htmlsc($_plugin_bugtrack['header_bgcolor']);
+	$table = array();
+	for ($i = 0; $i <= $count_list + 1; ++$i) $table[$i] = array();
+	foreach ($data as $line) {
+		list($page_name, $no, $summary, $name, $priority, $state, $category, $filetime, $state_no, $html) = $line;
+		$table[$state_no][$no] = $html;
+	}
+	$table_html = ' <tr class="bugtrack_list_header">';
 	foreach (array('pagename', 'state', 'priority', 'category', 'name', 'summary') as $item)
-		$table_html .= '  <th style="background-color:' . $bgcolor . '">' .
-			htmlsc($_plugin_bugtrack[$item]) . '</th>' . "\n";
-	$table_html .= ' </tr>' . "\n";
-
+		$table_html .= '<th>' . htmlsc($_plugin_bugtrack[$item]) . '</th>';
+	$table_html .= '</tr>' . "\n";
 	for ($i = 0; $i <= $count_list; ++$i) {
 		ksort($table[$i], SORT_NUMERIC);
-		$table_html .= join("\n", $table[$i]);
+		$table_html .= join('', $table[$i]);
 	}
-
-	return '<table border="1" width="100%">' . "\n" .
+	$result_html = '<table border="1" width="100%">' . "\n" .
 		$table_html . "\n" .
 		'</table>';
+	if ($cache_enabled) {
+		$cache_data['recent_deleted_filetime'] = get_filetime($whatsdeleted);
+		$cache_data['recent_dat_filemtime'] = filemtime(CACHE_DIR . PKWK_MAXSHOW_CACHE);
+		$cache_data['html'] = $result_html;
+		$cache_body = json_encode($cache_data, JSON_UNESCAPED_UNICODE + JSON_UNESCAPED_SLASHES);
+		file_put_contents($cache_filepath, $cache_body, LOCK_EX);
+	}
+	return $result_html;
 }
 
 // Get one set of data from a page (or a page moved to $page)
-function plugin_bugtrack_list_pageinfo($page, $no = NULL, $recurse = TRUE)
+function plugin_bugtrack_list_pageinfo($page, $no = NULL, $recurse = TRUE, $filetime = NULL)
 {
 	global $WikiName, $InterWikiName, $BracketName, $_plugin_bugtrack;
 
@@ -328,7 +461,7 @@ function plugin_bugtrack_list_pageinfo($page, $no = NULL, $recurse = TRUE)
 	$regex  = "/move\s*to\s*($WikiName|$InterWikiName|\[\[$BracketName\]\])/";
 	$match  = array();
 	if ($recurse && preg_match($regex, $source[0], $match))
-		return plugin_bugtrack_list_pageinfo(strip_bracket($match[1]), $no, FALSE);
+		return plugin_bugtrack_list_pageinfo(strip_bracket($match[1]), $no, FALSE, $filetime);
 
 	$body = join("\n", $source);
 	foreach(array('summary', 'name', 'priority', 'state', 'category') as $item) {
@@ -343,12 +476,10 @@ function plugin_bugtrack_list_pageinfo($page, $no = NULL, $recurse = TRUE)
 				$$item = ''; // Data not found
 		}
 	}
-
 	if (preg_match("/\*([^\n]*)/", $body, $matches)) {
 		$summary = $matches[1];
 		make_heading($summary);
+		$summary = trim($summary);
 	}
-
-	return array($page, $no, $summary, $name, $priority, $state, $category);
+	return array($page, $no, $summary, $name, $priority, $state, $category, $filetime);
 }
-
