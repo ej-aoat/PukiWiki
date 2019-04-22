@@ -273,8 +273,9 @@ class Heading extends Element
 
 	function toString()
 	{
+		$paraedit_flag = (preg_match("/^content_1_/", $this->id)) ? ' paraedit_flag=on' : '';
 		return $this->msg_top .  $this->wrap(parent::toString(),
-			'h' . $this->level, ' id="' . $this->id . '"');
+			'h' . $this->level, " id=\"{$this->id}\"$paraedit_flag");
 	}
 }
 
