@@ -254,7 +254,7 @@ class Heading extends Element
 	{
 		parent::__construct();
 
-		$this->level = min(3, strspn($text, '*'));
+		$this->level = min(5, strspn($text, '*'));
 		list($text, $this->msg_top, $this->id) = $root->getAnchor($text, $this->level);
 		$this->insert(Factory_Inline($text));
 		$this->level++; // h2,h3,h4

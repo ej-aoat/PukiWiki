@@ -80,11 +80,18 @@ h4 {
 }
 h5, h6 {
 	font-family:verdana, arial, helvetica, Sans-Serif;
+	font-size: 100%;
 	color:inherit;
-	background-color:#DDEEFF;
+	background-color:#FFFFFF;
  	padding:.3em;
- 	border:0px;
+ 	border-bottom: solid 1px #6594e0;
  	margin:0px 0px .5em 0px;
+}
+
+h6 {
+	font-size: 90%;
+	padding: .1em .3em;
+	border-bottom: solid 1px lightgray;
 }
 
 h1.title {
