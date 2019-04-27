@@ -116,6 +116,10 @@ dt {
 	margin-left:1em;
 }
 
+dd {
+	margin-left: 2em;
+}
+
 pre {
 	border-top:#DDDDEE 1px solid;
 	border-bottom:#888899 1px solid;
