@@ -1,0 +1,10 @@
+/** style.inc.php */
+div.prompt pre {
+	color: white;
+	background-color: black!important;
+}
+
+div.prompt pre .noexists{
+	color: inherit;
+	background-color: inherit;
+}

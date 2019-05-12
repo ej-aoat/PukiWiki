@@ -150,7 +150,7 @@ ul {
 }
 
 li {
-	margin: 0.2em 0;
+	margin: 0.5em 0;
 }
 
 em { font-style:italic; }
@@ -703,4 +703,11 @@ background-color: transparent;
 img.external_link{
 	margin-right:.5em;
 	margin-left:.2em;
+}
+
+/* tag.inc.php */
+span.tag {
+	display: block;
+	margin-top: 1em;
+	margin-bottom: 1em;
 }

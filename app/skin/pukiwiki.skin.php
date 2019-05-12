@@ -69,6 +69,7 @@ header('Content-Type: text/html; charset=' . CONTENT_CHARSET);
  <link rel="SHORTCUT ICON" href="<?php echo $image['favicon'] ?>" />
  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css" integrity="sha384-GJzZqFGwb1QTTN6wy59ffF1BuGJpLSa9DkKMp0DgiMDm4iYMj70gZWKYbI706tWS" crossorigin="anonymous">
  <link rel="stylesheet" type="text/css" href="<?php echo SKIN_DIR ?>pukiwiki.css" />
+ <link rel="stylesheet" type="text/css" href="<?php echo SKIN_DIR ?>special.css" />
  <link rel="alternate" type="application/rss+xml" title="RSS" href="<?php echo $link['rss'] ?>" /><?php // RSS auto-discovery ?>
  <link rel="stylesheet" type="text/css" href="<?php echo SKIN_DIR ?>ajaxtree/ajaxtree.css" />
  <script type="text/javascript" src="skin/main.js" defer></script>

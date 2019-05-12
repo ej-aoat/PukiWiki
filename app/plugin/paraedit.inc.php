@@ -53,7 +53,7 @@ GPL2 (GNU General Public License version 2)
 
 // 編集リンクの文字列・スタイルを指定
 //   %s に URL が入る
-define(_EDIT_LINK, '<div style="text-align: right; font-size: x-small; padding: 0px; margin-top: -7px;"><a href="%s">[edit]</a></div>');
+define(_EDIT_LINK, '<div style="text-align: right; font-size: x-small; padding: 0px;padding-bottom: 1em; margin-top: -2.5em;"><a href="%s">[edit]</a></div>');
 
 // 編集リンクの挿入箇所を指定
 //   <h2>header</h2> の時、$1:<h2>, $2:header, $3:</h2> となるので $link を好きな場所に移動
