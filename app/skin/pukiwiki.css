@@ -14,7 +14,14 @@ pre, dl, ol, p, blockquote {
   line-height:130%;
 }
 blockquote {
-  margin-left:32px;
+  background-color: #f6f6f6;
+  margin: 0 32px;
+  border: 2px solid silver;
+  border-left: 4px solid silver;
+  padding: 0.2rem 0.7rem;
+}
+blockquote > p {
+  margin: 0px;
 }
 body,td {
   color:black;
