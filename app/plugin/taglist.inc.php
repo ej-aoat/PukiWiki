@@ -52,6 +52,7 @@ class PluginTaglist
             'date'      => array('bool', false), // will be obsolete
             'new'       => array('bool', false),
             'tag'       => array('string', null),
+            'random'    => array('bool', false),
             'related'   => array('string', null),
             'linkstr'   => array('enum', 'name', array('name', 'page', 'pagename', 'absolute', 'base', 'basename', 'title', 'firsthead', 'headline')),
             'link'      => array('enum', 'page', array('page', 'anchor', 'off')),
@@ -240,6 +241,11 @@ class PluginTaglist
         $pagelist->sort_by($options['sort'], $options['reverse']);
 
         $max = count($pagelist->metapages); // for next option
+
+        if ($options['random']) {
+            $pagelist->shuffle();
+        }
+
         if (is_array($options['num'])) {
             list($offset, $length) = $options['num'];
             $pagelist->slice($offset, $length);

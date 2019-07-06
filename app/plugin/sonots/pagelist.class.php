@@ -234,6 +234,16 @@ class PluginSonotsPagelist
     }
 
     /**
+     * Shuffle of metapages
+     *
+     * @access public
+     */
+    function shuffle()
+    {
+        shuffle($this->metapages);
+    }
+
+    /**
      * Reverse order of metapages
      *
      * @access public
