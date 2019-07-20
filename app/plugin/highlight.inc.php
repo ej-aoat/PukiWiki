@@ -5,8 +5,8 @@ function plugin_highlight_init()
 {
 	global $head_tags;
 
-	$head_tags[] = '<link rel="stylesheet" href="//cdn.jsdelivr.net/highlight.js/8.4/styles/monokai_sublime.min.css">';
-	$head_tags[] = '<script src="//cdn.jsdelivr.net/highlight.js/8.4/highlight.min.js"></script>';
+	$head_tags[] = '<link rel="stylesheet" href="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.15.8/build/styles/monokai-sublime.min.css">';
+	$head_tags[] = '<script src="//cdn.jsdelivr.net/gh/highlightjs/cdn-release@9.15.8/build/highlight.min.js"></script>';
 }
 
 function plugin_highlight_convert()
