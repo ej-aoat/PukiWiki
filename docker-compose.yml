@@ -3,18 +3,11 @@ services:
   app:
     build: ./docker/php
     container_name: "app-pukiwiki"
+# Vagrant利用時用の設定
+    #environment:
+    #  - APACHE_RUN_USER=#33
     volumes:
       - ./app:/var/www/html/app
       - ./data:/var/www/html/data
     ports:
       - 80:80
-#  mysql:
-#    image: mysql:5.7
-#    environment:
-#      - MYSQL_ROOT_PASSWORD=root
-#    ports:
-#      - 3306:3306
-#    volumes:
-#      - dbdata:/var/lib/mysql
-#volumes:
-#  dbdata:
