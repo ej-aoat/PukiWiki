@@ -372,7 +372,7 @@ function file_write($dir, $page, $str, $notimestamp = FALSE, $is_delete = FALSE)
 	$str = rtrim(preg_replace('/' . "\r" . '/', '', $str)) . "\n";
 	$timestamp = ($file_exists && $notimestamp) ? filemtime($file) : FALSE;
 
-	$fp = fopen($file, 'a') or die('fopen() failed: ' .
+	$fp = fopen($file, 'w') or die('fopen() failed: ' .
 		htmlsc(basename($dir) . '/' . encode($page) . '.txt') .	
 		'<br />' . "\n" .
 		'Maybe permission is not writable or filename is too long');
