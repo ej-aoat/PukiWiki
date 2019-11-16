@@ -1,0 +1,15 @@
+version: '3'
+services:
+  pukiwikicus-app:
+    build: /app
+    container_name: "app-pukiwiki"
+    environment:
+      # Vagrant利用時用の設定
+      #    Apacheの実行ユーザーを指定し、
+      #    ホスト側のパーミッションでファイルを書き換えできるようにします。
+      - APACHE_RUN_USER=#33
+    volumes:
+      - /app/app:/var/www/html
+      - /app/data:/var/www/data
+    ports:
+      - 80:80

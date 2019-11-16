@@ -1,0 +1,27 @@
+ENV["TZ"] = "Asia/Tokyo"
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/bionic64"
+  # プライベートネットワーク
+  # config.vm.network "private_network", ip: "172.53.1.48"
+  config.vm.hostname = "banshee.pukiwikicus.local"
+  config.disksize.size = '100GB'
+  
+  # パブリックネットワークで、DHCPサーバーからの割当を使う場合
+  # MAC: 08:00:27:00:01:01
+  config.vm.network "public_network", mac: "080027000101"
+  config.vm.synced_folder "./../", "/app", type:"virtualbox" , mount_options: ["uid=33", "gid=33"]
+  config.vm.synced_folder "./", "/vagrant", type:"virtualbox" , mount_options: ["uid=33", "gid=33"]
+  
+  config.vm.provision :shell, inline: <<-SHELL
+  timedatectl set-timezone "Asia/Tokyo"
+SHELL
+
+  config.vm.provider "virtualbox" do |v|
+    v.name = "vagrant-pukiwikicus-app"
+    v.customize ["modifyvm", :id, "--ostype", "RedHat_64"]
+    v.memory = "4096"
+  end
+  
+  config.vm.provision :shell, path: "dockerinstall.sh"
+end
